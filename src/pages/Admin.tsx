@@ -41,6 +41,7 @@ export const Admin: React.FC = () => {
   const [editName, setEditName] = useState('')
   const [editRole, setEditRole] = useState<'admin' | 'member'>('member')
   const [updating, setUpdating] = useState(false)
+  const [deletingUser, setDeletingUser] = useState<ProfileItem | null>(null)
 
   async function loadUsers() {
     setLoading(true)
@@ -279,62 +280,46 @@ export const Admin: React.FC = () => {
     }
   }
 
-  // Delete user (using Edge Function with client-side fallback)
+  // Demote user role (instead of deletion, make them member)
   async function handleDeleteUser(targetUser: ProfileItem) {
     if (targetUser.id === user?.id) {
-      showToast('Você não pode remover a si mesmo.', 'error')
+      showToast('Você não pode alterar o seu próprio papel de administrador.', 'error')
       return
     }
 
     const targetUsername = targetUser.email ? (targetUser.email.endsWith('@domestre.com') ? targetUser.email.split('@')[0] : targetUser.email) : 'Usuário'
-    if (!confirm(`Remover o acesso de ${targetUsername}? Essa ação não pode ser desfeita.`)) {
-      return
-    }
-
     const isMockUser = user?.id === '00000000-0000-0000-0000-000000000000'
+    setUpdating(true)
+    
     try {
-      let functionSuccess = false
-      try {
-        const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-          body: { user_id: targetUser.id }
-        })
-        if (!error && !data?.error) {
-          functionSuccess = true
-        }
-      } catch (e) {
-        console.warn('Edge function invoke failed, running client-side fallback delete:', e)
-      }
+      // Demote to member: delete 'admin' role, insert 'member' role
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', targetUser.id)
+        .eq('role', 'admin')
 
-      if (functionSuccess) {
-        // Fallback client-side delete of profile if edge function succeeds
-        await supabase.from('profiles').delete().eq('id', targetUser.id)
-        showToast('Usuário removido com sucesso!', 'success')
-      } else {
-        // Fallback: Delete roles to block access, and try deleting profile
-        const { error: roleDelErr } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', targetUser.id)
+      const { error: insErr } = await supabase
+        .from('user_roles')
+        .insert({ user_id: targetUser.id, role: 'member' })
 
-        if (roleDelErr) throw roleDelErr
-
-        // Try deleting profile (may be blocked by RLS, but if it succeeds, awesome)
-        await supabase.from('profiles').delete().eq('id', targetUser.id)
-
-        showToast('Acesso do usuário revogado e removido localmente.', 'success')
-      }
+      if (insErr && !insErr.message.includes('duplicate')) throw insErr
 
       // Log in history
       await supabase.from('historico').insert({
         user_id: isMockUser ? null : user?.id,
-        action: 'DELETE_USER',
+        action: 'DEMOTE_USER',
         details: { target_username: targetUsername, target_email: targetUser.email }
       })
 
+      showToast(`Privilégios de ${targetUsername} removidos. O usuário agora é comum.`, 'success')
+      setDeletingUser(null)
       await loadUsers()
     } catch (err: any) {
       console.error(err)
-      showToast('Erro ao remover usuário: ' + err.message, 'error')
+      showToast('Erro ao remover privilégios: ' + err.message, 'error')
+    } finally {
+      setUpdating(false)
     }
   }
 
@@ -501,10 +486,10 @@ export const Admin: React.FC = () => {
                             Tornar {p.role === 'admin' ? 'comum' : 'admin'}
                           </button>
                           <button
-                            onClick={() => handleDeleteUser(p)}
-                            disabled={p.id === user?.id}
+                            onClick={() => setDeletingUser(p)}
+                            disabled={p.id === user?.id || p.role === 'member'}
                             className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            title="Remover"
+                            title={p.role === 'member' ? "Usuário já é comum" : "Remover privilégios / Tornar comum"}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -594,6 +579,50 @@ export const Admin: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE/DEMOTE CONFIRMATION MODAL */}
+      {deletingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl bg-card border border-border p-6 shadow-2xl animate-in zoom-in-95 duration-200 text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-destructive/10 text-destructive mb-4 animate-bounce">
+              <Trash2 size={24} />
+            </div>
+            
+            <h3 className="text-lg font-bold text-foreground mb-2">
+              Remover privilégios?
+            </h3>
+            
+            <p className="text-sm text-muted-foreground mb-6">
+              Deseja remover os privilégios de administrador de <span className="font-semibold text-foreground">{deletingUser.full_name || (deletingUser.email ? deletingUser.email.split('@')[0] : 'este usuário')}</span>? 
+              <span className="block mt-2 text-xs">O usuário não será excluído do sistema, ele apenas se tornará um usuário comum.</span>
+            </p>
+
+            <div className="flex gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => setDeletingUser(null)}
+                disabled={updating}
+                className="flex-1 px-4 py-2 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteUser(deletingUser)}
+                disabled={updating}
+                style={{ backgroundImage: 'var(--gradient-accent)' }}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-brand-red-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02] transition-transform disabled:opacity-60 disabled:hover:scale-100"
+              >
+                {updating ? (
+                  <LoaderCircle size={16} className="animate-spin" />
+                ) : (
+                  'Confirmar'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
