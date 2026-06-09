@@ -8,7 +8,6 @@ DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 DROP FUNCTION IF EXISTS public.get_user_role(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.admin_update_user_credentials(uuid, text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.admin_delete_user(uuid) CASCADE;
-DROP FUNCTION IF EXISTS public.admin_create_user(text, text, text, text) CASCADE;
 
 DROP TABLE IF EXISTS public.user_roles CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
@@ -156,66 +155,7 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- 5. FUNÇÃO DE CRIAÇÃO DIRETA DE USUÁRIOS (Contorna limites de e-mail/rate limits)
-CREATE OR REPLACE FUNCTION public.admin_create_user(
-    _new_email text,
-    _new_password text,
-    _new_full_name text,
-    _new_role text
-)
-RETURNS uuid
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-    _new_user_id uuid;
-BEGIN
-    IF public.get_user_role(auth.uid()) != 'admin' AND auth.role() != 'anon' THEN
-        RAISE EXCEPTION 'Acesso negado: apenas administradores podem criar usuários.';
-    END IF;
 
-    IF EXISTS (SELECT 1 FROM auth.users WHERE email = _new_email) THEN
-        RAISE EXCEPTION 'Erro: Este usuário/email já está cadastrado.';
-    END IF;
-
-    -- Inserção na tabela interna auth.users (dispara handle_new_user automaticamente)
-    INSERT INTO auth.users (
-        instance_id,
-        id,
-        aud,
-        role,
-        email,
-        encrypted_password,
-        email_confirmed_at,
-        raw_app_meta_data,
-        raw_user_meta_data,
-        created_at,
-        updated_at,
-        email_change_confirm_status
-    ) VALUES (
-        '00000000-0000-0000-0000-000000000000',
-        gen_random_uuid(),
-        'authenticated',
-        'authenticated',
-        _new_email,
-        crypt(_new_password, gen_salt('bf', 10)),
-        now(),
-        '{"provider": "email", "providers": ["email"]}'::jsonb,
-        jsonb_build_object('full_name', _new_full_name),
-        now(),
-        now(),
-        0
-    ) RETURNING id INTO _new_user_id;
-
-    -- Se o papel selecionado não for 'member' (comum), altera o papel gerado pelo trigger
-    IF _new_role != 'member' THEN
-        DELETE FROM public.user_roles WHERE user_id = _new_user_id;
-        INSERT INTO public.user_roles (user_id, role) VALUES (_new_user_id, _new_role);
-    END IF;
-
-    RETURN _new_user_id;
-END;
-$$;
 
 -- 6. FUNÇÃO DE ATUALIZAÇÃO DE CREDENCIAIS (email/senha)
 CREATE OR REPLACE FUNCTION public.admin_update_user_credentials(
