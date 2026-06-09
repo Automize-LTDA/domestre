@@ -8,7 +8,6 @@ import {
   X, 
   LoaderCircle,
   Building2,
-  Settings,
   History,
   ClipboardList,
   MapPin
@@ -30,8 +29,7 @@ const navLinks: NavLinkItem[] = [
   { to: '/', label: 'Início', icon: Building2 },
   { to: '/novo', label: 'Novo Relatório', icon: ClipboardList },
   { to: '/relatorios', label: 'Relatórios Gerados', icon: History },
-  { to: '/visitas/novo', label: 'Visita a Filiais', icon: MapPin },
-  { to: '/configuracoes', label: 'Configurações', icon: Settings }
+  { to: '/visitas/novo', label: 'Visita a Filiais', icon: MapPin }
 ]
 
 export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }) => {
@@ -115,15 +113,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
           </div>
 
           {/* Mobile Header Bar */}
-          <div className="md:hidden grid grid-cols-3 items-center h-16">
-            <div />
-            <Link to="/" className="flex justify-center">
+          <div className="md:hidden flex items-center justify-between h-16 w-full">
+            {/* Logo on the left */}
+            <Link to="/" className="flex items-center">
               <img src={logoUrl} alt="Produtos Do Mestre" className="h-9 w-auto object-contain rounded-md" />
             </Link>
+            
+            {/* Menu button on the right */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Abrir menu"
-              className="justify-self-end p-2 rounded-lg text-brand-navy hover:bg-secondary transition-colors"
+              className="p-2 rounded-lg text-brand-navy dark:text-foreground hover:bg-secondary hover:text-brand-red transition-colors"
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>

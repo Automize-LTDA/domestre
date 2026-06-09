@@ -312,70 +312,164 @@ export const Relatorios: React.FC = () => {
             ))}
 
             {/* VISITAS TAB CONTENT */}
-            {activeTab === 'visitas' && filteredVisitas.map(visit => (
-              <article 
-                key={visit.id}
-                className="rounded-2xl bg-card border border-border p-5 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elegant)] transition-all"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-xs font-mono text-brand-red font-bold">
-                      Nº {visit.numero}
-                      <span className={`ml-2 px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-bold ${
-                        visit.status === 'Realizada' 
-                          ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                          : visit.status === 'Agendada'
-                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                          : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                      }`}>
-                        {visit.status}
-                      </span>
+            {activeTab === 'visitas' && filteredVisitas.map(visit => {
+              // Parse structured JSON if available
+              let structured: any = null
+              if (visit.observacoes) {
+                try {
+                  const parsed = JSON.parse(visit.observacoes)
+                  if (parsed && typeof parsed === 'object' && ('horarioChegada' in parsed || 'pontoExtra' in parsed)) {
+                    structured = parsed
+                  }
+                } catch (e) {}
+              }
+
+              return (
+                <article 
+                  key={visit.id}
+                  className="rounded-2xl bg-card border border-border p-5 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elegant)] transition-all"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 text-xs font-mono text-brand-red font-bold">
+                        Nº {visit.numero}
+                        <span className={`ml-2 px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider font-bold ${
+                          visit.status === 'Realizada' 
+                            ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                            : visit.status === 'Agendada'
+                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        }`}>
+                          {visit.status}
+                        </span>
+                      </div>
+                      
+                      <h3 className="mt-1.5 text-lg font-bold text-foreground flex items-center gap-2">
+                        <Building2 size={18} className="text-brand-navy shrink-0" />
+                        <span className="truncate">{visit.empresa}</span>
+                      </h3>
+
+                      {structured ? (
+                        <div className="mt-3 space-y-2.5">
+                          {/* Horários and Local info */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground border-b border-border/50 pb-2">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar size={13} className="text-brand-navy" />
+                              <span>Data: <strong>{new Date(visit.data).toLocaleDateString('pt-BR')}</strong></span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="shrink-0 text-brand-navy font-bold">🕒</span>
+                              <span>Chegada: <strong>{structured.horarioChegada}</strong> · Saída: <strong>{structured.horarioSaida}</strong></span>
+                            </div>
+                            <div className="flex items-center gap-1.5 sm:col-span-2 mt-0.5">
+                              <span className="shrink-0 text-brand-navy font-bold">📍</span>
+                              <span>Local: <strong>{visit.motivo}</strong></span>
+                            </div>
+                          </div>
+
+                          {/* Attribute Tags */}
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            <span className={`text-[10px] uppercase font-bold tracking-wider rounded-md px-2 py-0.5 border ${
+                              structured.pontoExtra === 'SIM'
+                                ? 'bg-green-500/10 text-green-600 border-green-500/20 dark:text-green-400'
+                                : 'bg-secondary text-muted-foreground border-border'
+                            }`}>
+                              Ponto Extra: {structured.pontoExtra}
+                            </span>
+                            
+                            <span className={`text-[10px] uppercase font-bold tracking-wider rounded-md px-2 py-0.5 border ${
+                              structured.ruptura === 'SIM'
+                                ? 'bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400'
+                                : 'bg-green-500/10 text-green-600 border-green-500/20 dark:text-green-400'
+                            }`}>
+                              Ruptura: {structured.ruptura}
+                            </span>
+
+                            <span className={`text-[10px] uppercase font-bold tracking-wider rounded-md px-2 py-0.5 border ${
+                              structured.situacaoEstoque === 'Adequado'
+                                ? 'bg-green-500/10 text-green-600 border-green-500/20 dark:text-green-400'
+                                : structured.situacaoEstoque === 'Moderado'
+                                ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20 dark:text-yellow-400'
+                                : 'bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400'
+                            }`}>
+                              Estoque: {structured.situacaoEstoque}
+                            </span>
+
+                            {structured.preco && structured.preco.length > 0 && (
+                              <span className="text-[10px] uppercase font-bold tracking-wider bg-blue-500/10 text-blue-600 border border-blue-500/20 dark:text-blue-400 rounded-md px-2 py-0.5">
+                                Preço: {structured.preco.join(', ')}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Quick checklist of materials */}
+                          {structured.materiaisPositivados && structured.materiaisPositivados.length > 0 && (
+                            <div className="text-[11px] text-muted-foreground/90 mt-1 flex flex-wrap gap-1 items-center">
+                              <span className="font-semibold text-foreground">Materiais:</span>
+                              {structured.materiaisPositivados.map((m: string) => (
+                                <span key={m} className="bg-secondary text-secondary-foreground rounded-md px-1.5 py-0.5">
+                                  {m === 'Outro' && structured.materiaisPositivadosOutro ? structured.materiaisPositivadosOutro : m}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="text-[10px] text-muted-foreground pt-1 flex items-center gap-1.5">
+                            <span className="font-semibold">Visitante:</span> {visit.responsavel}
+                          </div>
+                        </div>
+                      ) : (
+                        // Legacy view
+                        <>
+                          <div className="mt-2 text-sm font-semibold text-foreground/90">
+                            Motivo: <span className="font-normal text-muted-foreground">{visit.motivo}</span>
+                          </div>
+                          {visit.atividades && (
+                            <div className="mt-1 text-xs text-muted-foreground truncate max-w-xl">
+                              Atividades: {visit.atividades}
+                            </div>
+                          )}
+                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1">
+                              <User size={12} /> {visit.responsavel}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Calendar size={12} /> {new Date(visit.data).toLocaleDateString('pt-BR')}
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <h3 className="mt-1 text-lg font-bold text-foreground flex items-center gap-2">
-                      <Building2 size={18} className="text-brand-navy shrink-0" />
-                      <span className="truncate">{visit.empresa}</span>
-                    </h3>
-                    <div className="mt-2 text-sm font-semibold text-foreground/90">
-                      Motivo: <span className="font-normal text-muted-foreground">{visit.motivo}</span>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1">
-                        <User size={12} /> {visit.responsavel}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Calendar size={12} /> {new Date(visit.data).toLocaleDateString('pt-BR')}
-                      </span>
+
+                    <div className="flex items-center gap-3 shrink-0 self-center">
+                      <button
+                        onClick={() => generateVisitPDF({
+                          numero: visit.numero,
+                          empresa: visit.empresa,
+                          responsavel: visit.responsavel,
+                          data: visit.data,
+                          motivo: visit.motivo,
+                          atividades: visit.atividades,
+                          observacoes: visit.observacoes,
+                          status: visit.status
+                        })}
+                        className="inline-flex items-center gap-2 rounded-lg bg-brand-navy text-primary-foreground px-3 py-2 text-xs font-bold hover:bg-brand-red transition-colors"
+                      >
+                        <FileDown size={14} /> PDF
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteVisita(visit.id)}
+                        className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => generateVisitPDF({
-                        numero: visit.numero,
-                        empresa: visit.empresa,
-                        responsavel: visit.responsavel,
-                        data: visit.data,
-                        motivo: visit.motivo,
-                        atividades: visit.atividades,
-                        observacoes: visit.observacoes,
-                        status: visit.status
-                      })}
-                      className="inline-flex items-center gap-2 rounded-lg bg-brand-navy text-primary-foreground px-3 py-2 text-xs font-bold hover:bg-brand-red transition-colors"
-                    >
-                      <FileDown size={14} /> PDF
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteVisita(visit.id)}
-                      className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                      title="Excluir"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              )
+            })}
           </div>
         )}
       </div>

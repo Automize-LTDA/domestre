@@ -47,7 +47,7 @@ export function generateReportPDF(data: PDFReportData) {
 
   // Header Title
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
+  doc.setFontSize(14)
   doc.setTextColor(30, 41, 99) // Navy color
   doc.text('RELATÓRIO DE CONTROLE DE AVARIAS', width - margin, 50, { align: 'right' })
 
@@ -161,7 +161,7 @@ export function generateVisitPDF(data: PDFVisitData) {
 
   // Header Title
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
+  doc.setFontSize(14)
   doc.setTextColor(30, 41, 99) // Navy color
   doc.text('RELATÓRIO DE VISITA TÉCNICA / COMERCIAL', width - margin, 50, { align: 'right' })
 
@@ -204,32 +204,76 @@ export function generateVisitPDF(data: PDFVisitData) {
   doc.setFont('helvetica', 'normal')
   doc.text(data.status || '-', margin + 130, y)
 
-  y += 35
+  // Parse structured JSON if available
+  let structured: any = null
+  if (data.observacoes) {
+    try {
+      const parsed = JSON.parse(data.observacoes)
+      if (parsed && typeof parsed === 'object' && ('horarioChegada' in parsed || 'pontoExtra' in parsed)) {
+        structured = parsed
+      }
+    } catch (e) {}
+  }
 
-  // Reason
-  doc.setFont('helvetica', 'bold')
-  doc.text('Motivo / Assunto Principal:', margin, y)
-  doc.setFont('helvetica', 'normal')
-  const motivoLines = doc.splitTextToSize(data.motivo || '-', width - margin * 2)
-  doc.text(motivoLines, margin, y + 16)
+  if (structured) {
+    // Render local/city info
+    y += 18
+    doc.setFont('helvetica', 'bold')
+    doc.text('Cidade / Bairro:', margin, y)
+    doc.setFont('helvetica', 'normal')
+    doc.text(data.motivo || '-', margin + 130, y)
 
-  y += 16 + motivoLines.length * 14 + 20
+    y += 35
 
-  // Activities
-  doc.setFont('helvetica', 'bold')
-  doc.text('Atividades Realizadas:', margin, y)
-  doc.setFont('helvetica', 'normal')
-  const atividadesLines = doc.splitTextToSize(data.atividades || '-', width - margin * 2)
-  doc.text(atividadesLines, margin, y + 16)
+    // Checklist table
+    const tableBody = [
+      ['Horário de Chegada', structured.horarioChegada || '-'],
+      ['Horário de Saída', structured.horarioSaida || '-'],
+      ['Ponto Extra', structured.pontoExtra || '-'],
+      ['Tipo de Ponto Extra', structured.tipoPontoExtra.join(', ') + (structured.tipoPontoExtraOutro ? ` (${structured.tipoPontoExtraOutro})` : '')],
+      ['Materiais Positivados (Merchan)', structured.materiaisPositivados.join(', ') + (structured.materiaisPositivadosOutro ? ` (${structured.materiaisPositivadosOutro})` : '')],
+      ['Preço', structured.preco.join(', ') || '-'],
+      ['Situação do Estoque', structured.situacaoEstoque || '-'],
+      ['Ruptura', structured.ruptura || '-']
+    ]
 
-  y += 16 + atividadesLines.length * 14 + 20
+    autoTable(doc, {
+      startY: y,
+      head: [['Campo de Verificação', 'Resposta']],
+      body: tableBody,
+      theme: 'striped',
+      headStyles: { fillColor: [30, 41, 99], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: 8 },
+      margin: { left: margin, right: margin }
+    })
+  } else {
+    y += 35
 
-  // Observations
-  doc.setFont('helvetica', 'bold')
-  doc.text('Observações / Próximos Passos:', margin, y)
-  doc.setFont('helvetica', 'normal')
-  const obsLines = doc.splitTextToSize(data.observacoes || '-', width - margin * 2)
-  doc.text(obsLines, margin, y + 16)
+    // Reason
+    doc.setFont('helvetica', 'bold')
+    doc.text('Motivo / Assunto Principal:', margin, y)
+    doc.setFont('helvetica', 'normal')
+    const motivoLines = doc.splitTextToSize(data.motivo || '-', width - margin * 2)
+    doc.text(motivoLines, margin, y + 16)
+
+    y += 16 + motivoLines.length * 14 + 20
+
+    // Activities
+    doc.setFont('helvetica', 'bold')
+    doc.text('Atividades Realizadas:', margin, y)
+    doc.setFont('helvetica', 'normal')
+    const atividadesLines = doc.splitTextToSize(data.atividades || '-', width - margin * 2)
+    doc.text(atividadesLines, margin, y + 16)
+
+    y += 16 + atividadesLines.length * 14 + 20
+
+    // Observations
+    doc.setFont('helvetica', 'bold')
+    doc.text('Observações / Próximos Passos:', margin, y)
+    doc.setFont('helvetica', 'normal')
+    const obsLines = doc.splitTextToSize(data.observacoes || '-', width - margin * 2)
+    doc.text(obsLines, margin, y + 16)
+  }
 
   // Signature Block
   const sigY = height - 100
