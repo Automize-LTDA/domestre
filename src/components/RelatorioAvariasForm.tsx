@@ -334,9 +334,10 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
       })
 
       return insertedReport
-    } catch (e) {
-      console.error(e)
-      showToast('Falha ao salvar relatório no banco de dados.', 'error')
+    } catch (e: any) {
+      console.error('Supabase error:', e)
+      const errMsg = e?.message || e?.error_description || JSON.stringify(e) || 'Erro desconhecido'
+      showToast(`Erro BD: ${errMsg}`, 'error')
       throw e
     } finally {
       setLoading(false)
