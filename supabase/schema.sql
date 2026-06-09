@@ -1,7 +1,3 @@
--- Schema for Mestre SaaS
--- Database: PostgreSQL (Supabase)
-
--- Drop existing resources first to ensure clean execution and prevent relation/trigger/policy duplication errors
 drop trigger if exists on_auth_user_created on auth.users;
 drop function if exists public.handle_new_user() cascade;
 drop function if exists public.get_user_role(uuid) cascade;
@@ -27,7 +23,7 @@ create table public.profiles (
 create table public.user_roles (
     id bigint generated always as identity primary key,
     user_id uuid references public.profiles(id) on delete cascade not null,
-    role text not null check (role in ('admin', 'member')),
+    role text not null check (role in ('admin', 'member', 'promotor')),
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
     unique(user_id, role)
 );
@@ -259,3 +255,58 @@ create policy "Anyone authenticated can view configurations" on public.configura
     for select using (auth.role() in ('authenticated', 'anon'));
 create policy "Only admin can manage configurations" on public.configuracoes
     for all using (public.get_user_role(auth.uid()) = 'admin' or auth.role() = 'anon');
+
+-- 9. ADMIN CREDENTIALS UPDATE FUNCTION (SECURITY DEFINER to write to auth.users from client)
+CREATE OR REPLACE FUNCTION public.admin_update_user_credentials(
+    _user_id uuid,
+    _new_email text,
+    _new_password text DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Only allow execution if the caller is an admin or if it is an anonymous/mock admin connection
+    IF public.get_user_role(auth.uid()) != 'admin' AND auth.role() != 'anon' THEN
+        RAISE EXCEPTION 'Acesso negado: apenas administradores podem alterar credenciais.';
+    END IF;
+
+    -- Update email in auth.users if provided
+    IF _new_email IS NOT NULL AND _new_email != '' THEN
+        -- Also update email in profiles
+        UPDATE public.profiles
+        SET email = _new_email
+        WHERE id = _user_id;
+
+        UPDATE auth.users
+        SET email = _new_email,
+            email_change_confirm_status = 0 -- bypass verification
+        WHERE id = _user_id;
+    END IF;
+
+    -- Update password in auth.users if provided
+    IF _new_password IS NOT NULL AND _new_password != '' THEN
+        UPDATE auth.users
+        SET encrypted_password = crypt(_new_password, gen_salt('bf', 10))
+        WHERE id = _user_id;
+    END IF;
+END;
+$$;
+
+-- 10. ADMIN DELETE USER FUNCTION (SECURITY DEFINER to delete from auth.users from client)
+CREATE OR REPLACE FUNCTION public.admin_delete_user(_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Only allow execution if the caller is an admin or if it is an anonymous/mock admin connection
+    IF public.get_user_role(auth.uid()) != 'admin' AND auth.role() != 'anon' THEN
+        RAISE EXCEPTION 'Acesso negado: apenas administradores podem remover usuários.';
+    END IF;
+
+    -- Delete from auth.users (cascades to profiles and user_roles)
+    DELETE FROM auth.users WHERE id = _user_id;
+END;
+$$;

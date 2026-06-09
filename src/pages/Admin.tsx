@@ -12,14 +12,15 @@ import {
   Plus, 
   Trash2, 
   LoaderCircle,
-  Pencil
+  Pencil,
+  MapPin
 } from 'lucide-react'
 
 interface ProfileItem {
   id: string
   full_name: string | null
   email: string | null
-  role: 'admin' | 'member'
+  role: 'admin' | 'member' | 'promotor'
   created_at: string
 }
 
@@ -34,12 +35,14 @@ export const Admin: React.FC = () => {
   const [newName, setNewName] = useState('')
   const [newUsername, setNewUsername] = useState('')
   const [newPassword, setNewPassword] = useState('')
-  const [newRole, setNewRole] = useState<'admin' | 'member'>('member')
+  const [newRole, setNewRole] = useState<'admin' | 'member' | 'promotor'>('member')
 
   // Edit user state
   const [editingUser, setEditingUser] = useState<ProfileItem | null>(null)
   const [editName, setEditName] = useState('')
-  const [editRole, setEditRole] = useState<'admin' | 'member'>('member')
+  const [editUsername, setEditUsername] = useState('')
+  const [editPassword, setEditPassword] = useState('')
+  const [editRole, setEditRole] = useState<'admin' | 'member' | 'promotor'>('member')
   const [updating, setUpdating] = useState(false)
   const [deletingUser, setDeletingUser] = useState<ProfileItem | null>(null)
 
@@ -61,11 +64,11 @@ export const Admin: React.FC = () => {
 
       if (rolesErr) throw rolesErr
 
-      const roleMap = new Map<string, 'admin' | 'member'>()
+      const roleMap = new Map<string, 'admin' | 'member' | 'promotor'>()
       rolesData?.forEach(r => {
         // If a user has both, prefer 'admin'
         if (r.role === 'admin' || !roleMap.has(r.user_id)) {
-          roleMap.set(r.user_id, r.role as 'admin' | 'member')
+          roleMap.set(r.user_id, r.role as 'admin' | 'member' | 'promotor')
         }
       })
 
@@ -159,6 +162,11 @@ export const Admin: React.FC = () => {
   const startEdit = (targetUser: ProfileItem) => {
     setEditingUser(targetUser)
     setEditName(targetUser.full_name || '')
+    const usernameVal = targetUser.email 
+      ? (targetUser.email.endsWith('@domestre.com') ? targetUser.email.split('@')[0] : targetUser.email) 
+      : ''
+    setEditUsername(usernameVal)
+    setEditPassword('')
     setEditRole(targetUser.role)
   }
 
@@ -171,6 +179,16 @@ export const Admin: React.FC = () => {
       return
     }
 
+    if (!editUsername.trim()) {
+      showToast('Por favor, preencha o login do usuário.', 'error')
+      return
+    }
+
+    if (editPassword && editPassword.length < 8) {
+      showToast('A nova senha deve ter no mínimo 8 caracteres.', 'error')
+      return
+    }
+
     if (editingUser.id === user?.id && editRole !== 'admin') {
       showToast('Você não pode alterar o seu próprio papel de administrador.', 'error')
       return
@@ -178,18 +196,39 @@ export const Admin: React.FC = () => {
 
     setUpdating(true)
     const isMockUser = user?.id === '00000000-0000-0000-0000-000000000000'
-    const targetUsername = editingUser.email ? (editingUser.email.endsWith('@domestre.com') ? editingUser.email.split('@')[0] : editingUser.email) : 'Usuário'
+    
+    const cleanUsername = editUsername.trim()
+    const targetEmail = cleanUsername.includes('@') 
+      ? cleanUsername 
+      : `${cleanUsername}@domestre.com`
+
+    const emailChanged = targetEmail !== editingUser.email
+    const passwordChanged = !!editPassword
 
     try {
-      // 1. Update profiles table
+      // 1. Update auth credentials if changed
+      if (emailChanged || passwordChanged) {
+        const { error: rpcErr } = await supabase.rpc('admin_update_user_credentials', {
+          _user_id: editingUser.id,
+          _new_email: emailChanged ? targetEmail : null,
+          _new_password: passwordChanged ? editPassword : null
+        })
+
+        if (rpcErr) throw rpcErr
+      }
+
+      // 2. Update profiles table
       const { error: profileErr } = await supabase
         .from('profiles')
-        .update({ full_name: editName.trim() })
+        .update({ 
+          full_name: editName.trim(),
+          email: targetEmail
+        })
         .eq('id', editingUser.id)
 
       if (profileErr) throw profileErr
 
-      // 2. Update user_roles if changed
+      // 3. Update user_roles if changed
       if (editRole !== editingUser.role) {
         await supabase
           .from('user_roles')
@@ -203,17 +242,18 @@ export const Admin: React.FC = () => {
         if (roleInsErr) throw roleInsErr
       }
 
-      // 3. Log in history
+      // 4. Log in history
       await supabase.from('historico').insert({
         user_id: isMockUser ? null : user?.id,
         action: 'UPDATE_USER',
         details: { 
-          target_username: targetUsername, 
-          target_email: editingUser.email, 
+          target_username: cleanUsername, 
+          target_email: targetEmail, 
           old_name: editingUser.full_name,
           new_name: editName.trim(),
           old_role: editingUser.role,
-          new_role: editRole 
+          new_role: editRole,
+          credentials_updated: emailChanged || passwordChanged
         }
       })
 
@@ -280,10 +320,10 @@ export const Admin: React.FC = () => {
     }
   }
 
-  // Demote user role (instead of deletion, make them member)
+  // Delete user from system completely via RPC
   async function handleDeleteUser(targetUser: ProfileItem) {
     if (targetUser.id === user?.id) {
-      showToast('Você não pode alterar o seu próprio papel de administrador.', 'error')
+      showToast('Você não pode excluir a si mesmo.', 'error')
       return
     }
 
@@ -292,32 +332,34 @@ export const Admin: React.FC = () => {
     setUpdating(true)
     
     try {
-      // Demote to member: delete 'admin' role, insert 'member' role
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', targetUser.id)
-        .eq('role', 'admin')
+      // 1. Call RPC function to delete from auth.users (cascades to profiles and roles)
+      const { error: rpcErr } = await supabase.rpc('admin_delete_user', {
+        _user_id: targetUser.id
+      })
 
-      const { error: insErr } = await supabase
-        .from('user_roles')
-        .insert({ user_id: targetUser.id, role: 'member' })
+      if (rpcErr) {
+        console.warn('RPC delete failed, falling back to direct profiles delete:', rpcErr)
+        // Fallback: Delete profile directly (cascades to user_roles)
+        const { error: profilesErr } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', targetUser.id)
+        if (profilesErr) throw profilesErr
+      }
 
-      if (insErr && !insErr.message.includes('duplicate')) throw insErr
-
-      // Log in history
+      // 2. Log in history
       await supabase.from('historico').insert({
         user_id: isMockUser ? null : user?.id,
-        action: 'DEMOTE_USER',
+        action: 'DELETE_USER',
         details: { target_username: targetUsername, target_email: targetUser.email }
       })
 
-      showToast(`Privilégios de ${targetUsername} removidos. O usuário agora é comum.`, 'success')
+      showToast(`Usuário ${targetUsername} excluído com sucesso!`, 'success')
       setDeletingUser(null)
       await loadUsers()
     } catch (err: any) {
       console.error(err)
-      showToast('Erro ao remover privilégios: ' + err.message, 'error')
+      showToast('Erro ao remover usuário: ' + err.message, 'error')
     } finally {
       setUpdating(false)
     }
@@ -389,10 +431,11 @@ export const Admin: React.FC = () => {
               </span>
               <select
                 value={newRole}
-                onChange={e => setNewRole(e.target.value as 'admin' | 'member')}
+                onChange={e => setNewRole(e.target.value as 'admin' | 'member' | 'promotor')}
                 className="input"
               >
                 <option value="member">Comum</option>
+                <option value="promotor">Promotor</option>
                 <option value="admin">Administrador</option>
               </select>
             </label>
@@ -459,13 +502,15 @@ export const Admin: React.FC = () => {
                         {p.email ? (p.email.endsWith('@domestre.com') ? p.email.split('@')[0] : p.email) : '—'}
                       </td>
                       <td className="py-3 px-3">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold border ${
                           p.role === 'admin'
-                            ? 'bg-brand-red text-brand-red-foreground'
-                            : 'bg-secondary text-foreground border border-border'
+                            ? 'bg-brand-red text-brand-red-foreground border-transparent'
+                            : p.role === 'promotor'
+                              ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                              : 'bg-secondary text-foreground border-border'
                         }`}>
-                          {p.role === 'admin' ? <ShieldCheck size={12} /> : <UserCheck size={12} />}
-                          {p.role === 'admin' ? 'Administrador' : 'Comum'}
+                          {p.role === 'admin' ? <ShieldCheck size={12} /> : p.role === 'promotor' ? <MapPin size={12} /> : <UserCheck size={12} />}
+                          {p.role === 'admin' ? 'Administrador' : p.role === 'promotor' ? 'Promotor' : 'Comum'}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-right">
@@ -487,9 +532,9 @@ export const Admin: React.FC = () => {
                           </button>
                           <button
                             onClick={() => setDeletingUser(p)}
-                            disabled={p.id === user?.id || p.role === 'member'}
+                            disabled={p.id === user?.id}
                             className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            title={p.role === 'member' ? "Usuário já é comum" : "Remover privilégios / Tornar comum"}
+                            title="Excluir usuário permanentemente"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -536,15 +581,42 @@ export const Admin: React.FC = () => {
 
               <label className="block">
                 <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Usuário / Login
+                </span>
+                <input
+                  value={editUsername}
+                  onChange={e => setEditUsername(e.target.value)}
+                  placeholder="Ex.: joao"
+                  className="input"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Nova Senha (deixe em branco para não alterar)
+                </span>
+                <input
+                  type="text"
+                  value={editPassword}
+                  onChange={e => setEditPassword(e.target.value)}
+                  placeholder="Min. 8 caracteres para alterar"
+                  className="input font-mono"
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                   Papel
                 </span>
                 <select
                   value={editRole}
-                  onChange={e => setEditRole(e.target.value as 'admin' | 'member')}
+                  onChange={e => setEditRole(e.target.value as 'admin' | 'member' | 'promotor')}
                   className="input"
                   disabled={editingUser.id === user?.id}
                 >
                   <option value="member">Comum</option>
+                  <option value="promotor">Promotor</option>
                   <option value="admin">Administrador</option>
                 </select>
                 {editingUser.id === user?.id && (
@@ -592,12 +664,12 @@ export const Admin: React.FC = () => {
             </div>
             
             <h3 className="text-lg font-bold text-foreground mb-2">
-              Remover privilégios?
+              Excluir Usuário?
             </h3>
             
             <p className="text-sm text-muted-foreground mb-6">
-              Deseja remover os privilégios de administrador de <span className="font-semibold text-foreground">{deletingUser.full_name || (deletingUser.email ? deletingUser.email.split('@')[0] : 'este usuário')}</span>? 
-              <span className="block mt-2 text-xs">O usuário não será excluído do sistema, ele apenas se tornará um usuário comum.</span>
+              Deseja excluir permanentemente o usuário <span className="font-semibold text-foreground">{deletingUser.full_name || (deletingUser.email ? deletingUser.email.split('@')[0] : 'este usuário')}</span>? 
+              <span className="block mt-2 text-xs text-brand-red font-semibold">Esta ação é irreversível e removerá todo o histórico e acesso do usuário.</span>
             </p>
 
             <div className="flex gap-3 justify-center">

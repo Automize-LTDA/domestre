@@ -98,7 +98,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
                     {fullName || user.email?.split('@')[0]}
                   </div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    {role === 'admin' ? 'Administrador' : 'Usuário'}
+                    {role === 'admin' ? 'Administrador' : role === 'promotor' ? 'Promotor' : 'Comum'}
                   </div>
                 </div>
                 <button
@@ -141,7 +141,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
                     {fullName || user.email?.split('@')[0]}
                   </div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    {role === 'admin' ? 'Administrador' : 'Usuário'}
+                    {role === 'admin' ? 'Administrador' : role === 'promotor' ? 'Promotor' : 'Comum'}
                   </div>
                 </div>
                 <button

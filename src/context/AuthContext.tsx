@@ -5,7 +5,7 @@ import type { Session, User } from '@supabase/supabase-js'
 interface AuthContextType {
   user: User | null
   session: Session | null
-  role: 'admin' | 'member' | null
+  role: 'admin' | 'member' | 'promotor' | null
   fullName: string | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
-  const [role, setRole] = useState<'admin' | 'member' | null>(null)
+  const [role, setRole] = useState<'admin' | 'member' | 'promotor' | null>(null)
   const [fullName, setFullName] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
 
@@ -29,7 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('profiles').select('full_name').eq('id', userId).maybeSingle()
       ])
       
-      setRole((roleRes.data as 'admin' | 'member') || 'member')
+      setRole((roleRes.data as 'admin' | 'member' | 'promotor') || 'member')
       setFullName(profileRes.data?.full_name || null)
     } catch (err) {
       console.error('Error fetching user roles and profile:', err)
