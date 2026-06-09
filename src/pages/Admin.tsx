@@ -11,7 +11,8 @@ import {
   UserCheck, 
   Plus, 
   Trash2, 
-  LoaderCircle 
+  LoaderCircle,
+  Pencil
 } from 'lucide-react'
 
 interface ProfileItem {
@@ -34,6 +35,12 @@ export const Admin: React.FC = () => {
   const [newUsername, setNewUsername] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [newRole, setNewRole] = useState<'admin' | 'member'>('member')
+
+  // Edit user state
+  const [editingUser, setEditingUser] = useState<ProfileItem | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editRole, setEditRole] = useState<'admin' | 'member'>('member')
+  const [updating, setUpdating] = useState(false)
 
   async function loadUsers() {
     setLoading(true)
@@ -145,6 +152,78 @@ export const Admin: React.FC = () => {
       showToast('Erro ao criar usuário: ' + err.message, 'error')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const startEdit = (targetUser: ProfileItem) => {
+    setEditingUser(targetUser)
+    setEditName(targetUser.full_name || '')
+    setEditRole(targetUser.role)
+  }
+
+  async function handleUpdateUser(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingUser) return
+
+    if (!editName.trim()) {
+      showToast('Por favor, preencha o nome completo.', 'error')
+      return
+    }
+
+    if (editingUser.id === user?.id && editRole !== 'admin') {
+      showToast('Você não pode alterar o seu próprio papel de administrador.', 'error')
+      return
+    }
+
+    setUpdating(true)
+    const isMockUser = user?.id === '00000000-0000-0000-0000-000000000000'
+    const targetUsername = editingUser.email ? (editingUser.email.endsWith('@domestre.com') ? editingUser.email.split('@')[0] : editingUser.email) : 'Usuário'
+
+    try {
+      // 1. Update profiles table
+      const { error: profileErr } = await supabase
+        .from('profiles')
+        .update({ full_name: editName.trim() })
+        .eq('id', editingUser.id)
+
+      if (profileErr) throw profileErr
+
+      // 2. Update user_roles if changed
+      if (editRole !== editingUser.role) {
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', editingUser.id)
+
+        const { error: roleInsErr } = await supabase
+          .from('user_roles')
+          .insert({ user_id: editingUser.id, role: editRole })
+
+        if (roleInsErr) throw roleInsErr
+      }
+
+      // 3. Log in history
+      await supabase.from('historico').insert({
+        user_id: isMockUser ? null : user?.id,
+        action: 'UPDATE_USER',
+        details: { 
+          target_username: targetUsername, 
+          target_email: editingUser.email, 
+          old_name: editingUser.full_name,
+          new_name: editName.trim(),
+          old_role: editingUser.role,
+          new_role: editRole 
+        }
+      })
+
+      showToast('Usuário atualizado com sucesso!', 'success')
+      setEditingUser(null)
+      await loadUsers()
+    } catch (err: any) {
+      console.error(err)
+      showToast('Erro ao atualizar usuário: ' + err.message, 'error')
+    } finally {
+      setUpdating(false)
     }
   }
 
@@ -407,6 +486,13 @@ export const Admin: React.FC = () => {
                       <td className="py-3 px-3 text-right">
                         <div className="inline-flex gap-2">
                           <button
+                            onClick={() => startEdit(p)}
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border text-foreground hover:bg-secondary transition-colors"
+                            title="Editar cadastro"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
                             onClick={() => handleToggleRole(p)}
                             disabled={p.id === user?.id}
                             className="text-xs font-semibold rounded-lg border border-border px-3 py-1.5 hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
@@ -432,6 +518,85 @@ export const Admin: React.FC = () => {
           )}
         </section>
       </div>
+
+      {/* EDIT MODAL */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl bg-card border border-border p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <Pencil size={18} className="text-brand-navy dark:text-white" />
+                  Editar Cadastro
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Editando o usuário: <span className="font-semibold">{editingUser.email ? (editingUser.email.endsWith('@domestre.com') ? editingUser.email.split('@')[0] : editingUser.email) : ''}</span>
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleUpdateUser} className="space-y-4">
+              <label className="block">
+                <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Nome completo
+                </span>
+                <input
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  placeholder="Ex.: João da Silva"
+                  className="input"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Papel
+                </span>
+                <select
+                  value={editRole}
+                  onChange={e => setEditRole(e.target.value as 'admin' | 'member')}
+                  className="input"
+                  disabled={editingUser.id === user?.id}
+                >
+                  <option value="member">Comum</option>
+                  <option value="admin">Administrador</option>
+                </select>
+                {editingUser.id === user?.id && (
+                  <span className="text-[10px] text-brand-red mt-1 block font-semibold">
+                    * Você não pode alterar o seu próprio papel administrativo.
+                  </span>
+                )}
+              </label>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  disabled={updating}
+                  className="px-4 py-2 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={updating}
+                  style={{ backgroundImage: 'var(--gradient-accent)' }}
+                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-brand-red-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02] transition-transform disabled:opacity-60 disabled:hover:scale-100"
+                >
+                  {updating ? (
+                    <>
+                      <LoaderCircle size={16} className="animate-spin" /> Salvando...
+                    </>
+                  ) : (
+                    'Salvar'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }
