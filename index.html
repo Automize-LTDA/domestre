@@ -3,7 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon-mestre.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { overflow-x: hidden; max-width: 100vw; }
+    /* Prevent iOS zoom on inputs (font-size must be >= 16px) */
+    input, textarea, select { font-size: 16px !important; }
+  </style>
     <title>Painel de Controle - Do Mestre</title>
   </head>
   <body>

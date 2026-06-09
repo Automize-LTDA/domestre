@@ -95,7 +95,7 @@ export const Login: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white font-sans text-slate-800 overflow-hidden relative">
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white font-sans text-slate-800 relative" style={{ overflowX: 'hidden', maxWidth: '100vw' }}>
       
       {/* CSS Animations */}
       <style>{`
@@ -121,9 +121,9 @@ export const Login: React.FC = () => {
       {/* ========================================================
           LADO ESQUERDO: FORMULÁRIO DE LOGIN (Seamless & Clean)
           ======================================================== */}
-      <div className="w-full md:w-1/2 lg:w-5/12 flex items-center justify-center p-8 sm:p-12 md:p-16 bg-white relative z-10 border-r border-slate-100 animate-slide-up">
+      <div className="w-full md:w-1/2 lg:w-5/12 flex items-center justify-center px-5 py-10 sm:p-12 md:p-16 bg-white relative z-10 border-r border-slate-100 animate-slide-up" style={{ minHeight: '100svh', overflowX: 'hidden' }}>
         
-        <div className="w-full max-w-sm space-y-8">
+        <div className="w-full max-w-sm space-y-8" style={{ width: '100%', maxWidth: '400px' }}>
           
           {/* Centered Logo & Header */}
           <div className="flex flex-col items-center text-center space-y-5">
@@ -165,10 +165,13 @@ export const Login: React.FC = () => {
                 <input
                   type="text"
                   autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
                   placeholder="ex: joao"
-                  className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#233A7A] focus:bg-white focus:ring-2 focus:ring-[#233A7A]/5 transition-all"
+                  className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#233A7A] focus:bg-white focus:ring-2 focus:ring-[#233A7A]/5 transition-all"
+                  style={{ fontSize: '16px', touchAction: 'manipulation' }}
                   required
                 />
               </div>
@@ -187,7 +190,8 @@ export const Login: React.FC = () => {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Digite sua senha"
-                  className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-11 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#233A7A] focus:bg-white focus:ring-2 focus:ring-[#233A7A]/5 transition-all"
+                  className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-11 text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#233A7A] focus:bg-white focus:ring-2 focus:ring-[#233A7A]/5 transition-all"
+                  style={{ fontSize: '16px', touchAction: 'manipulation' }}
                   required
                 />
                 <button
