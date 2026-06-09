@@ -311,8 +311,14 @@ export const Admin: React.FC = () => {
       })
 
       if (rpcErr) {
-        console.warn('RPC delete failed, falling back to direct profiles delete:', rpcErr)
-        // Fallback: Delete profile directly (cascades to user_roles)
+        console.warn('RPC delete failed, falling back to direct profiles/roles delete:', rpcErr)
+        // Fallback: Delete roles directly first
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', targetUser.id)
+
+        // Fallback: Delete profile directly
         const { error: profilesErr } = await supabase
           .from('profiles')
           .delete()

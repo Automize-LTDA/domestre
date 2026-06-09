@@ -306,7 +306,13 @@ BEGIN
         RAISE EXCEPTION 'Acesso negado: apenas administradores podem remover usuários.';
     END IF;
 
-    -- Delete from auth.users (cascades to profiles and user_roles)
+    -- Delete from user_roles first (prevents key constraints blocks)
+    DELETE FROM public.user_roles WHERE user_id = _user_id;
+
+    -- Delete from profiles
+    DELETE FROM public.profiles WHERE id = _user_id;
+
+    -- Delete from auth.users (if they still exist there)
     DELETE FROM auth.users WHERE id = _user_id;
 END;
 $$;
