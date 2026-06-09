@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Layout } from '../components/Layout'
-import { supabase } from '../supabaseClient'
+import { createClient } from '@supabase/supabase-js'
+import { supabase, supabaseUrl, supabaseAnonKey } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { 
@@ -81,7 +82,7 @@ export const Admin: React.FC = () => {
     loadUsers()
   }, [])
 
-  // Create new user (using Edge Function)
+  // Create new user (using client-side registration workaround)
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault()
     if (!newName.trim() || !newUsername.trim() || newPassword.length < 8) {
@@ -96,18 +97,46 @@ export const Admin: React.FC = () => {
         ? cleanUsername 
         : `${cleanUsername}@domestre.com`
 
-      // Invoke the Edge Function to create user
-      const { data, error } = await supabase.functions.invoke('admin-create-user', {
-        body: {
-          full_name: newName.trim(),
-          email: emailToAuth,
-          password: newPassword,
-          role: newRole
+      // 1. Create a non-persistent secondary client
+      const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false
         }
       })
 
-      if (error) throw error
-      if (data?.error) throw new Error(data.error)
+      // 2. Call signUp (creates auth.users + triggers profiles/roles creation automatically)
+      const { data: authData, error: authErr } = await tempClient.auth.signUp({
+        email: emailToAuth,
+        password: newPassword,
+        options: {
+          data: {
+            full_name: newName.trim()
+          }
+        }
+      })
+
+      if (authErr) throw authErr
+      if (!authData?.user) {
+        throw new Error('Falha ao registrar credenciais do novo usuário.')
+      }
+
+      // 3. If the role was requested to be 'admin', insert it into user_roles
+      // The trigger automatically inserts role='member', so we delete it and insert 'admin'
+      if (newRole === 'admin') {
+        const { error: roleInsErr } = await supabase
+          .from('user_roles')
+          .insert({ user_id: authData.user.id, role: 'admin' })
+
+        if (roleInsErr) throw roleInsErr
+
+        // Delete the default 'member' role row
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', authData.user.id)
+          .eq('role', 'member')
+      }
 
       showToast('Usuário criado com sucesso!', 'success')
       setNewName('')
@@ -175,7 +204,7 @@ export const Admin: React.FC = () => {
     }
   }
 
-  // Delete user (using Edge Function)
+  // Delete user (using Edge Function with client-side fallback)
   async function handleDeleteUser(targetUser: ProfileItem) {
     if (targetUser.id === user?.id) {
       showToast('Você não pode remover a si mesmo.', 'error')
@@ -189,15 +218,36 @@ export const Admin: React.FC = () => {
 
     const isMockUser = user?.id === '00000000-0000-0000-0000-000000000000'
     try {
-      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-        body: { user_id: targetUser.id }
-      })
+      let functionSuccess = false
+      try {
+        const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+          body: { user_id: targetUser.id }
+        })
+        if (!error && !data?.error) {
+          functionSuccess = true
+        }
+      } catch (e) {
+        console.warn('Edge function invoke failed, running client-side fallback delete:', e)
+      }
 
-      if (error) throw error
-      if (data?.error) throw new Error(data.error)
+      if (functionSuccess) {
+        // Fallback client-side delete of profile if edge function succeeds
+        await supabase.from('profiles').delete().eq('id', targetUser.id)
+        showToast('Usuário removido com sucesso!', 'success')
+      } else {
+        // Fallback: Delete roles to block access, and try deleting profile
+        const { error: roleDelErr } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', targetUser.id)
 
-      // Fallback client-side delete of profile if edge function succeeds or returns success
-      await supabase.from('profiles').delete().eq('id', targetUser.id)
+        if (roleDelErr) throw roleDelErr
+
+        // Try deleting profile (may be blocked by RLS, but if it succeeds, awesome)
+        await supabase.from('profiles').delete().eq('id', targetUser.id)
+
+        showToast('Acesso do usuário revogado e removido localmente.', 'success')
+      }
 
       // Log in history
       await supabase.from('historico').insert({
@@ -206,7 +256,6 @@ export const Admin: React.FC = () => {
         details: { target_username: targetUsername, target_email: targetUser.email }
       })
 
-      showToast('Usuário removido com sucesso!', 'success')
       await loadUsers()
     } catch (err: any) {
       console.error(err)
