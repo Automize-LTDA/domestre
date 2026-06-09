@@ -9,7 +9,6 @@ import {
   FileDown, 
   LoaderCircle,
   Building2,
-  Clock,
   MapPin,
   Sparkles,
   DollarSign,
@@ -28,14 +27,14 @@ export interface VisitFormState {
   horarioChegada: string
   horarioSaida: string
   local: string
-  pontoExtra: 'SIM' | 'NÃO' | ''
+  pontoExtra: 'Sim' | 'Não' | ''
   tipoPontoExtra: string[]
   tipoPontoExtraOutro: string
   materiaisPositivados: string[]
   materiaisPositivadosOutro: string
   preco: string[]
   situacaoEstoque: 'Adequado' | 'Moderado' | 'Baixa' | ''
-  ruptura: 'SIM' | 'NÃO' | ''
+  ruptura: 'Sim' | 'Não' | ''
 }
 
 const DRAFT_VISITA_KEY = 'domestre.draft_visita.v2'
@@ -146,6 +145,7 @@ export const RelatorioVisitasForm: React.FC = () => {
   }
 
   function validateForm(): boolean {
+    /*
     if (!form.horarioChegada) {
       showToast('Por favor, informe o Horário de Chegada.', 'error')
       return false
@@ -154,6 +154,7 @@ export const RelatorioVisitasForm: React.FC = () => {
       showToast('Por favor, informe o Horário de Saída.', 'error')
       return false
     }
+    */
     if (!form.empresa.trim()) {
       showToast('Por favor, informe o nome da loja.', 'error')
       return false
@@ -242,9 +243,9 @@ export const RelatorioVisitasForm: React.FC = () => {
     })
   }
 
-  const handlePontoExtraChange = (val: 'SIM' | 'NÃO') => {
+  const handlePontoExtraChange = (val: 'Sim' | 'Não') => {
     setForm(prev => {
-      const nextTipo = val === 'NÃO' ? ['Sem Ponto Extra'] : prev.tipoPontoExtra.filter(o => o !== 'Sem Ponto Extra')
+      const nextTipo = val === 'Não' ? ['Sem Ponto Extra'] : prev.tipoPontoExtra.filter(o => o !== 'Sem Ponto Extra')
       return {
         ...prev,
         pontoExtra: val,
@@ -379,7 +380,7 @@ export const RelatorioVisitasForm: React.FC = () => {
         </div>
       </div>
 
-      {/* 1. HORÁRIO DE CHEGADA */}
+      {/* 1. HORÁRIO DE CHEGADA 
       <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
         <div className="flex items-center justify-between mb-4">
           <label className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
@@ -397,8 +398,9 @@ export const RelatorioVisitasForm: React.FC = () => {
           />
         </div>
       </section>
+      */}
 
-      {/* 2. HORÁRIO DE SAÍDA */}
+      {/* 2. HORÁRIO DE SAÍDA
       <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
         <div className="flex items-center justify-between mb-4">
           <label className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
@@ -416,6 +418,7 @@ export const RelatorioVisitasForm: React.FC = () => {
           />
         </div>
       </section>
+      */}
 
       {/* 3. QUAL LOJA? */}
       <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
@@ -464,7 +467,7 @@ export const RelatorioVisitasForm: React.FC = () => {
           <Sparkles size={16} className="text-muted-foreground opacity-60" />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:max-w-md">
-          {['SIM', 'NÃO'].map(val => (
+          {['Sim', 'Não'].map(val => (
             <div 
               key={val}
               onClick={() => handlePontoExtraChange(val as any)}
@@ -732,7 +735,7 @@ export const RelatorioVisitasForm: React.FC = () => {
           <AlertTriangle size={16} className="text-muted-foreground opacity-60" />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:max-w-md">
-          {['SIM', 'NÃO'].map(val => (
+          {['Sim', 'Não'].map(val => (
             <div 
               key={val}
               onClick={() => setForm({ ...form, ruptura: val as any })}

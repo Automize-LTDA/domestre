@@ -121,22 +121,18 @@ export const Admin: React.FC = () => {
         throw new Error('Falha ao registrar credenciais do novo usuário.')
       }
 
-      // 3. If the role was requested to be 'admin', insert it into user_roles
-      // The trigger automatically inserts role='member', so we delete it and insert 'admin'
-      if (newRole === 'admin') {
-        const { error: roleInsErr } = await supabase
-          .from('user_roles')
-          .insert({ user_id: authData.user.id, role: 'admin' })
+      // 3. Set the correct role (admin or member) cleanly by clearing any auto-inserted roles first
+      // This avoids duplicate key violations on unique(user_id, role) if the database trigger auto-created it
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', authData.user.id)
 
-        if (roleInsErr) throw roleInsErr
+      const { error: roleInsErr } = await supabase
+        .from('user_roles')
+        .insert({ user_id: authData.user.id, role: newRole })
 
-        // Delete the default 'member' role row
-        await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', authData.user.id)
-          .eq('role', 'member')
-      }
+      if (roleInsErr) throw roleInsErr
 
       showToast('Usuário criado com sucesso!', 'success')
       setNewName('')
