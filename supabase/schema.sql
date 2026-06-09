@@ -1,323 +1,162 @@
-drop trigger if exists on_auth_user_created on auth.users;
-drop function if exists public.handle_new_user() cascade;
-drop function if exists public.get_user_role(uuid) cascade;
+-- Schema for Mestre SaaS
+-- Database: PostgreSQL (Supabase)
+-- Cole e execute todo este código no SQL Editor do Supabase
 
-drop table if exists public.user_roles cascade;
-drop table if exists public.profiles cascade;
-drop table if exists public.materiais cascade;
-drop table if exists public.empresas cascade;
-drop table if exists public.itens_relatorio_avaria cascade;
-drop table if exists public.relatorios_avarias cascade;
-drop table if exists public.relatorios_visitas cascade;
-drop table if exists public.historico cascade;
-drop table if exists public.configuracoes cascade;
+-- 1. LIMPAR RECURSOS ANTIGOS (Para evitar erros de duplicidade)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+DROP FUNCTION IF EXISTS public.get_user_role(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_update_user_credentials(uuid, text, text) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_delete_user(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_create_user(text, text, text, text) CASCADE;
 
--- 1. PROFILES & ROLES
-create table public.profiles (
-    id uuid references auth.users on delete cascade not null primary key,
+DROP TABLE IF EXISTS public.user_roles CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TABLE IF EXISTS public.materiais CASCADE;
+DROP TABLE IF EXISTS public.empresas CASCADE;
+DROP TABLE IF EXISTS public.itens_relatorio_avaria CASCADE;
+DROP TABLE IF EXISTS public.relatorios_avarias CASCADE;
+DROP TABLE IF EXISTS public.relatorios_visitas CASCADE;
+DROP TABLE IF EXISTS public.historico CASCADE;
+DROP TABLE IF EXISTS public.configuracoes CASCADE;
+
+-- 2. CRIAR TABELAS PRINCIPAIS
+CREATE TABLE public.profiles (
+    id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
     full_name text,
     email text,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-create table public.user_roles (
-    id bigint generated always as identity primary key,
-    user_id uuid references public.profiles(id) on delete cascade not null,
-    role text not null check (role in ('admin', 'member', 'promotor')),
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-    unique(user_id, role)
+CREATE TABLE public.user_roles (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    role text NOT NULL CHECK (role IN ('admin', 'member', 'promotor')),
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(user_id, role)
 );
 
--- 2. MATERIALS & COMPANIES
-create table public.materiais (
-    id uuid default gen_random_uuid() primary key,
-    name text unique not null,
+CREATE TABLE public.materiais (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name text UNIQUE NOT NULL,
     image_url text,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-create table public.empresas (
-    id uuid default gen_random_uuid() primary key,
-    name text unique not null,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+CREATE TABLE public.empresas (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name text UNIQUE NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. REPORTS (AVARIAS & VISITAS)
-create table public.relatorios_avarias (
-    id uuid default gen_random_uuid() primary key,
-    numero text unique not null,
-    empresa text not null,
-    responsavel text not null,
-    data timestamp with time zone not null,
+CREATE TABLE public.relatorios_avarias (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    numero text UNIQUE NOT NULL,
+    empresa text NOT NULL,
+    responsavel text NOT NULL,
+    data timestamp with time zone NOT NULL,
     situacao text,
     observacoes text,
-    total_itens integer default 0 not null,
-    created_by uuid references auth.users(id) on delete set null,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+    total_itens integer DEFAULT 0 NOT NULL,
+    created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-create table public.itens_relatorio_avaria (
-    id uuid default gen_random_uuid() primary key,
-    relatorio_id uuid references public.relatorios_avarias(id) on delete cascade not null,
-    material text not null,
-    quantidade integer not null check (quantidade > 0),
+CREATE TABLE public.itens_relatorio_avaria (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    relatorio_id uuid REFERENCES public.relatorios_avarias(id) ON DELETE CASCADE NOT NULL,
+    material text NOT NULL,
+    quantidade integer NOT NULL CHECK (quantidade > 0),
     tipo_avaria text,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-create table public.relatorios_visitas (
-    id uuid default gen_random_uuid() primary key,
-    numero text unique not null,
-    empresa text not null,
-    responsavel text not null,
-    data timestamp with time zone not null,
+CREATE TABLE public.relatorios_visitas (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    numero text UNIQUE NOT NULL,
+    empresa text NOT NULL,
+    responsavel text NOT NULL,
+    data timestamp with time zone NOT NULL,
     motivo text,
     atividades text,
     observacoes text,
-    status text default 'Realizada' not null check (status in ('Agendada', 'Realizada', 'Cancelada')),
-    created_by uuid references auth.users(id) on delete set null,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+    status text DEFAULT 'Realizada' NOT NULL CHECK (status IN ('Agendada', 'Realizada', 'Cancelada')),
+    created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 4. SYSTEM HISTORY & CONFIGURATION
-create table public.historico (
-    id uuid default gen_random_uuid() primary key,
-    user_id uuid references public.profiles(id) on delete set null,
-    action text not null,
+CREATE TABLE public.historico (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+    action text NOT NULL,
     details jsonb,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-create table public.configuracoes (
-    id uuid default gen_random_uuid() primary key,
-    key text unique not null,
+CREATE TABLE public.configuracoes (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    key text UNIQUE NOT NULL,
     value jsonb,
-    updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+    updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 5. FUNCTION TO GET USER ROLE (SECURITY DEFINER to avoid RLS policy recursion)
-create or replace function public.get_user_role(_user_id uuid)
-returns text
-language plpgsql
-security definer
-as $$
-declare
+-- 3. FUNÇÕES DO SISTEMA (SECURITY DEFINER para contornar RLS e permissões de auth)
+CREATE OR REPLACE FUNCTION public.get_user_role(_user_id uuid)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
     _role text;
-begin
-    if _user_id is null then
-        return 'member';
-    end if;
+BEGIN
+    IF _user_id IS NULL THEN
+        RETURN 'member';
+    END IF;
 
-    select role into _role
-    from public.user_roles
-    where user_id = _user_id
-    limit 1;
+    SELECT role INTO _role
+    FROM public.user_roles
+    WHERE user_id = _user_id
+    LIMIT 1;
     
-    return coalesce(_role, 'member');
-end;
+    RETURN COALESCE(_role, 'member');
+END;
 $$;
 
--- 6. AUTOMATIC PROFILE CREATION TRIGGER ON AUTH SIGNUP
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-as $$
-declare
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
     default_role text := 'member';
-begin
-    -- The first user to sign up will be the admin
-    if not exists (select 1 from public.profiles) then
+BEGIN
+    -- O primeiro usuário a se cadastrar será o administrador
+    IF NOT EXISTS (SELECT 1 FROM public.profiles) THEN
         default_role := 'admin';
-    end if;
+    END IF;
 
-    insert into public.profiles (id, full_name, email)
-    values (
-        new.id,
-        coalesce(new.raw_user_meta_data->>'full_name', new.email),
-        new.email
+    INSERT INTO public.profiles (id, full_name, email)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+        NEW.email
     )
-    on conflict (id) do nothing;
+    ON CONFLICT (id) DO NOTHING;
 
-    insert into public.user_roles (user_id, role)
-    values (new.id, default_role)
-    on conflict (user_id, role) do nothing;
+    INSERT INTO public.user_roles (user_id, role)
+    VALUES (NEW.id, default_role)
+    ON CONFLICT (user_id, role) DO NOTHING;
 
-    return new;
-end;
-$$;
-
-create trigger on_auth_user_created
-    after insert on auth.users
-    for each row execute procedure public.handle_new_user();
-
--- 7. SEED DATA
-insert into public.materiais (name, image_url) values
-    ('Argamassa AC1', '/assets/argamassa-ac1-BmpV27ny.jpeg'),
-    ('Argamassa AC2', '/assets/argamassa-ac2-CQZ9wPOC.jpeg'),
-    ('Argamassa AC3', '/assets/argamassa-ac3-B8WQUbpj.jpeg'),
-    ('Tinta Emborrachada 3,6L', '/assets/tinta-emborrachada-BbL48fij.jpeg'),
-    ('Tinta Emborrachada 18L', '/assets/tinta-emborrachada-BbL48fij.jpeg'),
-    ('Manta Líquida', '/assets/manta-liquida-Cr8zedL_.jpeg'),
-    ('Rejunte Tipo 2', '/assets/rejunte-tipo2-N3UJjJ3P.jpeg'),
-    ('Rejunte Siliconado', '/assets/rejunte-siliconado-BMqhJzFT.jpeg'),
-    ('Rejunte Piscinas', '/assets/rejunte-piscinas-DJ6NXkgV.jpeg'),
-    ('Argamassa Impermeabilizante', '/assets/argamassa-impermeabilizante-CTVnaWh2.jpeg')
-on conflict (name) do nothing;
-
--- 8. ROW LEVEL SECURITY (RLS) POLICIES
-alter table public.profiles enable row level security;
-alter table public.user_roles enable row level security;
-alter table public.materiais enable row level security;
-alter table public.empresas enable row level security;
-alter table public.relatorios_avarias enable row level security;
-alter table public.itens_relatorio_avaria enable row level security;
-alter table public.relatorios_visitas enable row level security;
-alter table public.historico enable row level security;
-alter table public.configuracoes enable row level security;
-
--- Profiles policies (allow authenticated and anonymous/mock users to view)
-create policy "Users can view all profiles" on public.profiles
-    for select using (auth.role() in ('authenticated', 'anon'));
-create policy "Users can update own profile" on public.profiles
-    for update using (auth.uid() = id or auth.role() = 'anon');
-
--- Roles policies (allow authenticated and anonymous to view, restrict updates using non-recursive role function or allow anon)
-create policy "Users can view all roles" on public.user_roles
-    for select using (auth.role() in ('authenticated', 'anon'));
-create policy "Only admin can modify roles" on public.user_roles
-    for all using (public.get_user_role(auth.uid()) = 'admin' or auth.role() = 'anon');
-
--- Materials policies
-create policy "Anyone authenticated can view materials" on public.materiais
-    for select using (auth.role() in ('authenticated', 'anon'));
-create policy "Only admin can manage materials" on public.materiais
-    for all using (public.get_user_role(auth.uid()) = 'admin' or auth.role() = 'anon');
-
--- Companies policies
-create policy "Anyone authenticated can view companies" on public.empresas
-    for select using (auth.role() in ('authenticated', 'anon'));
-create policy "Anyone authenticated can insert companies" on public.empresas
-    for insert with check (auth.role() in ('authenticated', 'anon'));
-
--- Avarias Reports policies
-create policy "Anyone authenticated can view avarias reports" on public.relatorios_avarias
-    for select using (auth.role() in ('authenticated', 'anon'));
-create policy "Anyone authenticated can insert avarias reports" on public.relatorios_avarias
-    for insert with check (auth.role() in ('authenticated', 'anon'));
-create policy "Admin or creator can delete avarias reports" on public.relatorios_avarias
-    for delete using (
-        created_by = auth.uid() or
-        created_by is null or
-        public.get_user_role(auth.uid()) = 'admin' or
-        auth.role() = 'anon'
-    );
-
--- Items policies
-create policy "Anyone authenticated can view avarias items" on public.itens_relatorio_avaria
-    for select using (auth.role() in ('authenticated', 'anon'));
-create policy "Anyone authenticated can insert avarias items" on public.itens_relatorio_avaria
-    for insert with check (auth.role() in ('authenticated', 'anon'));
-create policy "Admin or creator can delete avarias items" on public.itens_relatorio_avaria
-    for delete using (
-        exists (
-            select 1 from public.relatorios_avarias r
-            where r.id = relatorio_id and (
-                r.created_by = auth.uid() or
-                r.created_by is null or
-                public.get_user_role(auth.uid()) = 'admin' or
-                auth.role() = 'anon'
-            )
-        )
-    );
-
--- Visitas Reports policies
-create policy "Anyone authenticated can view visitas reports" on public.relatorios_visitas
-    for select using (auth.role() in ('authenticated', 'anon'));
-create policy "Anyone authenticated can insert visitas reports" on public.relatorios_visitas
-    for insert with check (auth.role() in ('authenticated', 'anon'));
-create policy "Admin or creator can delete visitas reports" on public.relatorios_visitas
-    for delete using (
-        created_by = auth.uid() or
-        created_by is null or
-        public.get_user_role(auth.uid()) = 'admin' or
-        auth.role() = 'anon'
-    );
-
--- Historico policies
-create policy "Admins can view history" on public.historico
-    for select using (public.get_user_role(auth.uid()) = 'admin' or auth.role() = 'anon');
-create policy "Anyone authenticated can insert history logs" on public.historico
-    for insert with check (auth.role() in ('authenticated', 'anon'));
-
--- Configuracoes policies
-create policy "Anyone authenticated can view configurations" on public.configuracoes
-    for select using (auth.role() in ('authenticated', 'anon'));
-create policy "Only admin can manage configurations" on public.configuracoes
-    for all using (public.get_user_role(auth.uid()) = 'admin' or auth.role() = 'anon');
-
--- 9. ADMIN CREDENTIALS UPDATE FUNCTION (SECURITY DEFINER to write to auth.users from client)
-CREATE OR REPLACE FUNCTION public.admin_update_user_credentials(
-    _user_id uuid,
-    _new_email text,
-    _new_password text DEFAULT NULL
-)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-    -- Only allow execution if the caller is an admin or if it is an anonymous/mock admin connection
-    IF public.get_user_role(auth.uid()) != 'admin' AND auth.role() != 'anon' THEN
-        RAISE EXCEPTION 'Acesso negado: apenas administradores podem alterar credenciais.';
-    END IF;
-
-    -- Update email in auth.users if provided
-    IF _new_email IS NOT NULL AND _new_email != '' THEN
-        -- Also update email in profiles
-        UPDATE public.profiles
-        SET email = _new_email
-        WHERE id = _user_id;
-
-        UPDATE auth.users
-        SET email = _new_email,
-            email_change_confirm_status = 0 -- bypass verification
-        WHERE id = _user_id;
-    END IF;
-
-    -- Update password in auth.users if provided
-    IF _new_password IS NOT NULL AND _new_password != '' THEN
-        UPDATE auth.users
-        SET encrypted_password = crypt(_new_password, gen_salt('bf', 10))
-        WHERE id = _user_id;
-    END IF;
+    RETURN NEW;
 END;
 $$;
 
--- 10. ADMIN DELETE USER FUNCTION (SECURITY DEFINER to delete from auth.users from client)
-CREATE OR REPLACE FUNCTION public.admin_delete_user(_user_id uuid)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-    -- Only allow execution if the caller is an admin or if it is an anonymous/mock admin connection
-    IF public.get_user_role(auth.uid()) != 'admin' AND auth.role() != 'anon' THEN
-        RAISE EXCEPTION 'Acesso negado: apenas administradores podem remover usuários.';
-    END IF;
+-- 4. TRIGGER DE CADASTRO AUTOMÁTICO
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
-    -- Delete from user_roles first (prevents key constraints blocks)
-    DELETE FROM public.user_roles WHERE user_id = _user_id;
-
-    -- Delete from profiles
-    DELETE FROM public.profiles WHERE id = _user_id;
-
-    -- Delete from auth.users (if they still exist there)
-    DELETE FROM auth.users WHERE id = _user_id;
-END;
-$$;
-
--- 11. ADMIN CREATE USER FUNCTION (SECURITY DEFINER to create users directly in auth.users bypassing rate limits)
+-- 5. FUNÇÃO DE CRIAÇÃO DIRETA DE USUÁRIOS (Contorna limites de e-mail/rate limits)
 CREATE OR REPLACE FUNCTION public.admin_create_user(
     _new_email text,
     _new_password text,
@@ -331,17 +170,15 @@ AS $$
 DECLARE
     _new_user_id uuid;
 BEGIN
-    -- Only allow execution if the caller is an admin or if it is an anonymous/mock admin connection
     IF public.get_user_role(auth.uid()) != 'admin' AND auth.role() != 'anon' THEN
         RAISE EXCEPTION 'Acesso negado: apenas administradores podem criar usuários.';
     END IF;
 
-    -- Check if email already exists in auth.users
     IF EXISTS (SELECT 1 FROM auth.users WHERE email = _new_email) THEN
         RAISE EXCEPTION 'Erro: Este usuário/email já está cadastrado.';
     END IF;
 
-    -- Insert directly into auth.users (this triggers public.handle_new_user automatically)
+    -- Inserção na tabela interna auth.users (dispara handle_new_user automaticamente)
     INSERT INTO auth.users (
         instance_id,
         id,
@@ -370,15 +207,164 @@ BEGIN
         0
     ) RETURNING id INTO _new_user_id;
 
-    -- Trigger already inserted role 'member'. Update if target role is different
+    -- Se o papel selecionado não for 'member' (comum), altera o papel gerado pelo trigger
     IF _new_role != 'member' THEN
-        -- Delete any auto-inserted roles first to prevent unique key violation
         DELETE FROM public.user_roles WHERE user_id = _new_user_id;
-        
-        INSERT INTO public.user_roles (user_id, role)
-        VALUES (_new_user_id, _new_role);
+        INSERT INTO public.user_roles (user_id, role) VALUES (_new_user_id, _new_role);
     END IF;
 
     RETURN _new_user_id;
 END;
 $$;
+
+-- 6. FUNÇÃO DE ATUALIZAÇÃO DE CREDENCIAIS (email/senha)
+CREATE OR REPLACE FUNCTION public.admin_update_user_credentials(
+    _user_id uuid,
+    _new_email text,
+    _new_password text DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    IF public.get_user_role(auth.uid()) != 'admin' AND auth.role() != 'anon' THEN
+        RAISE EXCEPTION 'Acesso negado: apenas administradores podem alterar credenciais.';
+    END IF;
+
+    IF _new_email IS NOT NULL AND _new_email != '' THEN
+        UPDATE public.profiles SET email = _new_email WHERE id = _user_id;
+        UPDATE auth.users SET email = _new_email, email_change_confirm_status = 0 WHERE id = _user_id;
+    END IF;
+
+    IF _new_password IS NOT NULL AND _new_password != '' THEN
+        UPDATE auth.users SET encrypted_password = crypt(_new_password, gen_salt('bf', 10)) WHERE id = _user_id;
+    END IF;
+END;
+$$;
+
+-- 7. FUNÇÃO DE EXCLUSÃO COMPLETA (Segura e limpa tudo)
+CREATE OR REPLACE FUNCTION public.admin_delete_user(_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    IF public.get_user_role(auth.uid()) != 'admin' AND auth.role() != 'anon' THEN
+        RAISE EXCEPTION 'Acesso negado: apenas administradores podem remover usuários.';
+    END IF;
+
+    -- Deleta explicitamente em ordem para evitar erros de chave estrangeira
+    DELETE FROM public.user_roles WHERE user_id = _user_id;
+    DELETE FROM public.profiles WHERE id = _user_id;
+    DELETE FROM auth.users WHERE id = _user_id;
+END;
+$$;
+
+-- 8. ALIMENTAR DADOS INICIAIS (SEEDS)
+INSERT INTO public.materiais (name, image_url) VALUES
+    ('Argamassa AC1', '/assets/argamassa-ac1-BmpV27ny.jpeg'),
+    ('Argamassa AC2', '/assets/argamassa-ac2-CQZ9wPOC.jpeg'),
+    ('Argamassa AC3', '/assets/argamassa-ac3-B8WQUbpj.jpeg'),
+    ('Tinta Emborrachada 3,6L', '/assets/tinta-emborrachada-BbL48fij.jpeg'),
+    ('Tinta Emborrachada 18L', '/assets/tinta-emborrachada-BbL48fij.jpeg'),
+    ('Manta Líquida', '/assets/manta-liquida-Cr8zedL_.jpeg'),
+    ('Rejunte Tipo 2', '/assets/rejunte-tipo2-N3UJjJ3P.jpeg'),
+    ('Rejunte Siliconado', '/assets/rejunte-siliconado-BMqhJzFT.jpeg'),
+    ('Rejunte Piscinas', '/assets/rejunte-piscinas-DJ6NXkgV.jpeg'),
+    ('Argamassa Impermeabilizante', '/assets/argamassa-impermeabilizante-CTVnaWh2.jpeg')
+ON CONFLICT (name) DO NOTHING;
+
+-- 9. HABILITAR SEGURANÇA DE LINHA (RLS - Row Level Security)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.materiais ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.empresas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.relatorios_avarias ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.itens_relatorio_avaria ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.relatorios_visitas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.historico ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.configuracoes ENABLE ROW LEVEL SECURITY;
+
+-- 10. CRIAR POLÍTICAS DE RLS (Permite acessos a usuários autenticados e mock/anon)
+
+-- Profiles
+CREATE POLICY "Users can view all profiles" ON public.profiles
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Users can update own profile" ON public.profiles
+    FOR UPDATE USING (auth.uid() = id OR auth.role() = 'anon');
+
+-- Roles
+CREATE POLICY "Users can view all roles" ON public.user_roles
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Only admin can modify roles" ON public.user_roles
+    FOR ALL USING (public.get_user_role(auth.uid()) = 'admin' OR auth.role() = 'anon');
+
+-- Materials
+CREATE POLICY "Anyone authenticated can view materials" ON public.materiais
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Only admin can manage materials" ON public.materiais
+    FOR ALL USING (public.get_user_role(auth.uid()) = 'admin' OR auth.role() = 'anon');
+
+-- Companies
+CREATE POLICY "Anyone authenticated can view companies" ON public.empresas
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Anyone authenticated can insert companies" ON public.empresas
+    FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
+
+-- Avarias Reports
+CREATE POLICY "Anyone authenticated can view avarias reports" ON public.relatorios_avarias
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Anyone authenticated can insert avarias reports" ON public.relatorios_avarias
+    FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Admin or creator can delete avarias reports" ON public.relatorios_avarias
+    FOR DELETE USING (
+        created_by = auth.uid() OR
+        created_by IS NULL OR
+        public.get_user_role(auth.uid()) = 'admin' OR
+        auth.role() = 'anon'
+    );
+
+-- Items Avarias
+CREATE POLICY "Anyone authenticated can view avarias items" ON public.itens_relatorio_avaria
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Anyone authenticated can insert avarias items" ON public.itens_relatorio_avaria
+    FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Admin or creator can delete avarias items" ON public.itens_relatorio_avaria
+    FOR DELETE USING (
+        EXISTS (
+            SELECT 1 FROM public.relatorios_avarias r
+            WHERE r.id = relatorio_id AND (
+                r.created_by = auth.uid() OR
+                r.created_by IS NULL OR
+                public.get_user_role(auth.uid()) = 'admin' OR
+                r.created_by = '00000000-0000-0000-0000-000000000000' OR
+                auth.role() = 'anon'
+            )
+        )
+    );
+
+-- Visitas Reports
+CREATE POLICY "Anyone authenticated can view visitas reports" ON public.relatorios_visitas
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Anyone authenticated can insert visitas reports" ON public.relatorios_visitas
+    FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Admin or creator can delete visitas reports" ON public.relatorios_visitas
+    FOR DELETE USING (
+        created_by = auth.uid() OR
+        created_by IS NULL OR
+        public.get_user_role(auth.uid()) = 'admin' OR
+        auth.role() = 'anon'
+    );
+
+-- Historico
+CREATE POLICY "Admins can view history" ON public.historico
+    FOR SELECT USING (public.get_user_role(auth.uid()) = 'admin' OR auth.role() = 'anon');
+CREATE POLICY "Anyone authenticated can insert history logs" ON public.historico
+    FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
+
+-- Configuracoes
+CREATE POLICY "Anyone authenticated can view configurations" ON public.configuracoes
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Only admin can manage configurations" ON public.configuracoes
+    FOR ALL USING (public.get_user_role(auth.uid()) = 'admin' OR auth.role() = 'anon');
