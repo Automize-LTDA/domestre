@@ -95,24 +95,26 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
   const [editAvaria, setEditAvaria] = useState('')
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // Fetch next report number from Supabase
+  // Fetch next report number from Supabase using MAX to avoid duplicate key conflicts
   async function fetchNextReportNumber() {
     try {
       const year = new Date().getFullYear()
-      const { count } = await supabase
+      // Use MAX of existing numbers (sorted desc, limit 1) instead of COUNT
+      // COUNT fails when records are deleted or partial inserts leave orphaned rows
+      const { data } = await supabase
         .from('relatorios_avarias')
-        .select('*', { count: 'exact', head: true })
+        .select('numero')
         .like('numero', `${year}-%`)
+        .order('numero', { ascending: false })
+        .limit(1)
 
-      const nextNum = (count || 0) + 1
+      const lastNum = data?.[0]?.numero
+        ? parseInt(data[0].numero.split('-')[1]) || 0
+        : 0
+      const nextNum = lastNum + 1
       const generatedNumber = `${year}-${String(nextNum).padStart(4, '0')}`
-      setForm(prev => {
-        // Only override if empty
-        if (!prev.numero) {
-          return { ...prev, numero: generatedNumber }
-        }
-        return prev
-      })
+
+      setForm(prev => ({ ...prev, numero: generatedNumber }))
     } catch (err) {
       console.error('Error fetching report number:', err)
     }
@@ -124,7 +126,8 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        setForm(parsed)
+        // Always clear the cached numero so it gets regenerated fresh from DB
+        setForm({ ...parsed, numero: '' })
       } catch (e) {
         console.error('Error parsing draft:', e)
       }
@@ -336,8 +339,9 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
       return insertedReport
     } catch (e: any) {
       console.error('Supabase error:', e)
-      const errMsg = e?.message || e?.error_description || JSON.stringify(e) || 'Erro desconhecido'
-      showToast(`Erro BD: ${errMsg}`, 'error')
+      showToast('Falha ao salvar relatório no banco de dados.', 'error')
+      // Regenerate number to avoid duplicate key on retry
+      fetchNextReportNumber()
       throw e
     } finally {
       setLoading(false)
