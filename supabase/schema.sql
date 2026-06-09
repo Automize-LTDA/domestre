@@ -310,3 +310,69 @@ BEGIN
     DELETE FROM auth.users WHERE id = _user_id;
 END;
 $$;
+
+-- 11. ADMIN CREATE USER FUNCTION (SECURITY DEFINER to create users directly in auth.users bypassing rate limits)
+CREATE OR REPLACE FUNCTION public.admin_create_user(
+    _new_email text,
+    _new_password text,
+    _new_full_name text,
+    _new_role text
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    _new_user_id uuid;
+BEGIN
+    -- Only allow execution if the caller is an admin or if it is an anonymous/mock admin connection
+    IF public.get_user_role(auth.uid()) != 'admin' AND auth.role() != 'anon' THEN
+        RAISE EXCEPTION 'Acesso negado: apenas administradores podem criar usuários.';
+    END IF;
+
+    -- Check if email already exists in auth.users
+    IF EXISTS (SELECT 1 FROM auth.users WHERE email = _new_email) THEN
+        RAISE EXCEPTION 'Erro: Este usuário/email já está cadastrado.';
+    END IF;
+
+    -- Insert directly into auth.users (this triggers public.handle_new_user automatically)
+    INSERT INTO auth.users (
+        instance_id,
+        id,
+        aud,
+        role,
+        email,
+        encrypted_password,
+        email_confirmed_at,
+        raw_app_meta_data,
+        raw_user_meta_data,
+        created_at,
+        updated_at,
+        email_change_confirm_status
+    ) VALUES (
+        '00000000-0000-0000-0000-000000000000',
+        gen_random_uuid(),
+        'authenticated',
+        'authenticated',
+        _new_email,
+        crypt(_new_password, gen_salt('bf', 10)),
+        now(),
+        '{"provider": "email", "providers": ["email"]}'::jsonb,
+        jsonb_build_object('full_name', _new_full_name),
+        now(),
+        now(),
+        0
+    ) RETURNING id INTO _new_user_id;
+
+    -- Trigger already inserted role 'member'. Update if target role is different
+    IF _new_role != 'member' THEN
+        -- Delete any auto-inserted roles first to prevent unique key violation
+        DELETE FROM public.user_roles WHERE user_id = _new_user_id;
+        
+        INSERT INTO public.user_roles (user_id, role)
+        VALUES (_new_user_id, _new_role);
+    END IF;
+
+    RETURN _new_user_id;
+END;
+$$;
