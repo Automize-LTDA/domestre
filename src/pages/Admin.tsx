@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Layout } from '../components/Layout'
-import { supabase, supabaseUrl, supabaseAnonKey } from '../supabaseClient'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { 
@@ -93,7 +92,7 @@ export const Admin: React.FC = () => {
     loadUsers()
   }, [])
 
-  // Create new user (using client-side registration workaround)
+  // Create new user (using client-side database RPC to bypass signup rate limits)
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault()
     if (!newName.trim() || !newUsername.trim() || newPassword.length < 8) {
@@ -108,41 +107,16 @@ export const Admin: React.FC = () => {
         ? cleanUsername 
         : `${cleanUsername}@domestre.com`
 
-      // 1. Create a non-persistent secondary client
-      const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false
-        }
+      // Call database RPC to create the user securely without trigger or rate limit issues
+      const { data: newUserId, error: createErr } = await supabase.rpc('admin_create_user', {
+        _new_email: emailToAuth,
+        _new_password: newPassword,
+        _new_full_name: newName.trim(),
+        _new_role: newRole
       })
 
-      // 2. Call signUp (creates auth.users + triggers profiles/roles creation automatically)
-      const { data: authData, error: authErr } = await tempClient.auth.signUp({
-        email: emailToAuth,
-        password: newPassword,
-        options: {
-          data: {
-            full_name: newName.trim()
-          }
-        }
-      })
-
-      if (authErr) throw authErr
-      if (!authData?.user) {
-        throw new Error('Falha ao registrar credenciais do novo usuário.')
-      }
-
-      // 3. Set the correct role (admin, member or promotor) cleanly by clearing any auto-inserted roles first
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', authData.user.id)
-
-      const { error: roleInsErr } = await supabase
-        .from('user_roles')
-        .insert({ user_id: authData.user.id, role: newRole })
-
-      if (roleInsErr) throw roleInsErr
+      if (createErr) throw createErr
+      if (!newUserId) throw new Error('Não foi possível criar o usuário.')
 
       showToast('Usuário criado com sucesso!', 'success')
       setNewName('')
