@@ -11,8 +11,7 @@ import {
   History,
   ClipboardList,
   MapPin,
-  Smartphone,
-  Heart
+  Smartphone
 } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
 
@@ -198,15 +197,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
           </div>
 
           {/* Lado direito: Crédito de desenvolvimento */}
-          <div className="flex items-center gap-1.5 text-muted-foreground flex-wrap justify-center">
-            <span>Orgulhosamente desenvolvido com</span>
-            <Heart size={12} className="text-brand-red animate-pulse" fill="currentColor" />
-            <span>pela</span>
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <span>Desenvolvido pela</span>
             <a
               href="https://automize-one.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center px-2.5 py-1 rounded-lg bg-secondary/80 border border-border text-foreground hover:text-brand-red hover:border-brand-red/30 transition-all duration-300 font-semibold shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
+              className="inline-flex items-center px-2.5 py-1 rounded-lg bg-secondary/80 border border-border text-foreground hover:text-brand-red hover:border-brand-red/30 transition-all duration-300 font-semibold shadow-[var(--shadow-soft)] animate-float-gentle"
             >
               Automize
             </a>
