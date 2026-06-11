@@ -97,22 +97,66 @@ export function generateReportPDF(data: PDFReportData) {
     margin: { left: margin, right: margin }
   })
 
-  // Table summary info
+  // Table summary info - Styled Dashboard-like Cards
   let finalY = (doc as any).lastAutoTable.finalY + 20
+  const printableWidth = width - margin * 2
 
+  // Summary Container Box
+  doc.setFillColor(245, 246, 248)
+  doc.roundedRect(margin, finalY, printableWidth, 45, 4, 4, 'F')
+
+  // Total de itens card column
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.text(`Total de itens: ${data.itens.length}`, margin, finalY)
-  doc.text(`Soma das quantidades: ${data.totalItens}`, margin, finalY + 16)
-
-  finalY += 40
-
-  // Observations
+  doc.setFontSize(8)
+  doc.setTextColor(110, 110, 110)
+  doc.text('TOTAL DE ITENS', margin + 15, finalY + 18)
   doc.setFont('helvetica', 'bold')
-  doc.text('Observações:', margin, finalY)
+  doc.setFontSize(14)
+  doc.setTextColor(30, 41, 99)
+  doc.text(String(data.itens.length), margin + 15, finalY + 36)
+
+  // Divider line
+  doc.setDrawColor(220, 220, 220)
+  doc.setLineWidth(1)
+  doc.line(margin + printableWidth / 2, finalY + 10, margin + printableWidth / 2, finalY + 35)
+
+  // Soma das quantidades card column
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(110, 110, 110)
+  doc.text('SOMA DAS QUANTIDADES', margin + printableWidth / 2 + 20, finalY + 18)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  doc.setTextColor(30, 41, 99)
+  doc.text(String(data.totalItens), margin + printableWidth / 2 + 20, finalY + 36)
+
+  finalY += 65
+
+  // Observations block - Styled Premium Callout Box
+  const obsText = data.observacoes ? data.observacoes.trim() : 'Nenhuma observação registrada.'
+  const obsLines = doc.splitTextToSize(obsText, printableWidth - 30)
+  const boxHeight = 25 + obsLines.length * 14 + 15
+
+  // Draw background
+  doc.setFillColor(249, 250, 251)
+  doc.roundedRect(margin, finalY, printableWidth, boxHeight, 4, 4, 'F')
+
+  // Left red accent bar
+  doc.setDrawColor(180, 30, 30)
+  doc.setLineWidth(3)
+  doc.line(margin, finalY, margin, finalY + boxHeight)
+
+  // Title
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(180, 30, 30)
+  doc.text('OBSERVAÇÕES', margin + 15, finalY + 18)
+
+  // Text content
   doc.setFont('helvetica', 'normal')
-  const obsLines = doc.splitTextToSize(data.observacoes || '-', width - margin * 2)
-  doc.text(obsLines, margin, finalY + 16)
+  doc.setFontSize(10)
+  doc.setTextColor(50, 50, 50)
+  doc.text(obsLines, margin + 15, finalY + 32)
 
   // Signature Block
   const sigY = height - 100
@@ -260,12 +304,32 @@ export function generateVisitPDF(data: PDFVisitData) {
 
     y += 16 + atividadesLines.length * 14 + 20
 
-    // Observations
+    // Observations block - Styled Premium Callout Box
+    const printableWidth = width - margin * 2
+    const obsText = data.observacoes ? data.observacoes.trim() : 'Nenhuma observação ou próximo passo registrado.'
+    const obsLines = doc.splitTextToSize(obsText, printableWidth - 30)
+    const boxHeight = 25 + obsLines.length * 14 + 15
+
+    // Draw background
+    doc.setFillColor(249, 250, 251)
+    doc.roundedRect(margin, y, printableWidth, boxHeight, 4, 4, 'F')
+
+    // Left red accent bar
+    doc.setDrawColor(180, 30, 30)
+    doc.setLineWidth(3)
+    doc.line(margin, y, margin, y + boxHeight)
+
+    // Title
     doc.setFont('helvetica', 'bold')
-    doc.text('Observações / Próximos Passos:', margin, y)
+    doc.setFontSize(8)
+    doc.setTextColor(180, 30, 30)
+    doc.text('OBSERVAÇÕES / PRÓXIMOS PASSOS', margin + 15, y + 18)
+
+    // Text content
     doc.setFont('helvetica', 'normal')
-    const obsLines = doc.splitTextToSize(data.observacoes || '-', width - margin * 2)
-    doc.text(obsLines, margin, y + 16)
+    doc.setFontSize(10)
+    doc.setTextColor(50, 50, 50)
+    doc.text(obsLines, margin + 15, y + 32)
   }
 
   // Signature Block
