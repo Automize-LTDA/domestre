@@ -258,12 +258,12 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
       empresa: form.empresa.trim(),
       responsavel: form.responsavel.trim(),
       data: form.data,
-      situacao: form.situacao.trim(),
+      situacao: '',
       observacoes: form.observacoes.trim(),
       totalItens: totalQuantities,
       itens: form.itens.map(item => ({
         ...item,
-        tipoAvaria: item.tipoAvaria.trim() ? item.tipoAvaria : form.situacao.trim()
+        tipoAvaria: item.tipoAvaria.trim()
       }))
     }
   }
@@ -562,26 +562,14 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
         <div className="space-y-4">
           <label className="block">
             <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-              Tipo de avaria (aplicado a todos os itens sem tipo definido)
-            </span>
-            <textarea
-              rows={3}
-              value={form.situacao}
-              onChange={e => setForm({ ...form, situacao: e.target.value })}
-              placeholder="Ex.: Embalagem rasgada, produto vencido, umidade..."
-              className="input min-h-[90px]"
-            />
-          </label>
-          <label className="block">
-            <span className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
               Observações
             </span>
             <textarea
-              rows={2}
+              rows={3}
               value={form.observacoes}
               onChange={e => setForm({ ...form, observacoes: e.target.value })}
-              placeholder="Outros detalhes ou observações relevantes"
-              className="input min-h-[60px]"
+              placeholder="Outros detalhes ou observações relevantes..."
+              className="input min-h-[90px]"
             />
           </label>
         </div>

@@ -107,15 +107,6 @@ export function generateReportPDF(data: PDFReportData) {
 
   finalY += 40
 
-  // Description general breakdown
-  doc.setFont('helvetica', 'bold')
-  doc.text('Situação geral:', margin, finalY)
-  doc.setFont('helvetica', 'normal')
-  const sitLines = doc.splitTextToSize(data.situacao || '-', width - margin * 2)
-  doc.text(sitLines, margin, finalY + 16)
-
-  finalY += 16 + sitLines.length * 14 + 10
-
   // Observations
   doc.setFont('helvetica', 'bold')
   doc.text('Observações:', margin, finalY)
@@ -130,7 +121,7 @@ export function generateReportPDF(data: PDFReportData) {
   doc.line(margin, sigY, margin + 240, sigY)
   doc.setFontSize(9)
   doc.setTextColor(100)
-  doc.text('Assinatura do responsável', margin, sigY + 14)
+  doc.text('Assinatura do promotor ou do emitente', margin, sigY + 14)
 
   // Footer metadata
   doc.setFontSize(8)
@@ -282,7 +273,7 @@ export function generateVisitPDF(data: PDFVisitData) {
   doc.line(margin, sigY, margin + 240, sigY)
   doc.setFontSize(9)
   doc.setTextColor(100)
-  doc.text('Assinatura do visitante', margin, sigY + 14)
+  doc.text('Assinatura do promotor ou do emitente', margin, sigY + 14)
 
   // Footer metadata
   doc.setFontSize(8)
