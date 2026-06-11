@@ -128,8 +128,8 @@ export const Dashboard: React.FC = () => {
         />
         
         {/* Content */}
-        <div className="relative mx-auto max-w-7xl px-6 pt-8 pb-16 lg:pt-10 lg:pb-24">
-          <div className="flex flex-col items-start">
+        <div className="relative mx-auto max-w-7xl px-6 pt-14 pb-20 lg:pt-16 lg:pb-28">
+          <div className="flex flex-col items-start animate-fade-in-up">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
               Sistema de Controle <br />
               <span className="text-brand-gold">de Avarias & Visitas</span>
