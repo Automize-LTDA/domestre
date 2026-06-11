@@ -191,12 +191,12 @@ export const InstalarApp: React.FC = () => {
                       <div className="bg-secondary/40 p-4 rounded-xl space-y-2">
                         <div className="h-6 w-6 rounded-full bg-brand-navy text-white text-xs font-bold flex items-center justify-center">1</div>
                         <p className="text-xs font-bold text-foreground">Abra o menu do Chrome</p>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed">Toque nos **três pontos verticais** no canto superior direito do navegador.</p>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">Toque nos <strong className="font-semibold text-brand-red">três pontos verticais</strong> no canto superior direito do navegador.</p>
                       </div>
                       <div className="bg-secondary/40 p-4 rounded-xl space-y-2">
                         <div className="h-6 w-6 rounded-full bg-brand-navy text-white text-xs font-bold flex items-center justify-center">2</div>
                         <p className="text-xs font-bold text-foreground">Adicionar à tela inicial</p>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed">Toque em **"Instalar aplicativo"** ou **"Adicionar à tela de início"** e confirme.</p>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">Toque em <strong className="font-semibold text-brand-red">"Instalar aplicativo"</strong> ou <strong className="font-semibold text-brand-red">"Adicionar à tela de início"</strong> e confirme.</p>
                       </div>
                     </div>
                   </div>
@@ -241,19 +241,19 @@ export const InstalarApp: React.FC = () => {
                       <div className="bg-secondary/40 p-4 rounded-xl flex items-start gap-3">
                         <div className="h-6 w-6 rounded-full bg-brand-navy text-white text-xs font-bold flex items-center justify-center shrink-0">1</div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          Abra este site no navegador **Safari** do seu iPhone.
+                          Abra este site no navegador <strong className="font-semibold text-brand-red">Safari</strong> do seu iPhone.
                         </p>
                       </div>
                       <div className="bg-secondary/40 p-4 rounded-xl flex items-start gap-3">
                         <div className="h-6 w-6 rounded-full bg-brand-navy text-white text-xs font-bold flex items-center justify-center shrink-0">2</div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          Toque no ícone de **Compartilhar** <Share size={14} className="inline text-blue-500" /> (o quadrado com seta para cima na parte inferior).
+                          Toque no ícone de <strong className="font-semibold text-brand-red">Compartilhar</strong> <Share size={14} className="inline text-blue-500" /> (o quadrado com seta para cima na parte inferior).
                         </p>
                       </div>
                       <div className="bg-secondary/40 p-4 rounded-xl flex items-start gap-3">
                         <div className="h-6 w-6 rounded-full bg-brand-navy text-white text-xs font-bold flex items-center justify-center shrink-0">3</div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          Role para baixo e selecione a opção **"Adicionar à Tela de Início"** <PlusSquare size={14} className="inline" /> e clique em **Adicionar**.
+                          Role para baixo e selecione a opção <strong className="font-semibold text-brand-red">"Adicionar à Tela de Início"</strong> <PlusSquare size={14} className="inline" /> e clique em <strong className="font-semibold text-brand-red">Adicionar</strong>.
                         </p>
                       </div>
                     </div>
@@ -300,7 +300,7 @@ export const InstalarApp: React.FC = () => {
                     1
                   </div>
                   <div className="text-xs text-foreground">
-                    Clique no botão de **Compartilhar** <Share size={16} className="inline text-blue-500 mx-1" /> na barra inferior do navegador Safari.
+                    Clique no botão de <strong className="font-bold text-brand-red">Compartilhar</strong> <Share size={16} className="inline text-blue-500 mx-1" /> na barra inferior do navegador Safari.
                   </div>
                 </div>
 
@@ -309,7 +309,7 @@ export const InstalarApp: React.FC = () => {
                     2
                   </div>
                   <div className="text-xs text-foreground">
-                    Role a lista que abrir e toque em **"Adicionar à Tela de Início"** <PlusSquare size={16} className="inline text-muted-foreground mx-1" />.
+                    Role a lista que abrir e toque em <strong className="font-bold text-brand-red">"Adicionar à Tela de Início"</strong> <PlusSquare size={16} className="inline text-muted-foreground mx-1" />.
                   </div>
                 </div>
 
@@ -318,7 +318,7 @@ export const InstalarApp: React.FC = () => {
                     3
                   </div>
                   <div className="text-xs text-foreground">
-                    Toque em **"Adicionar"** no canto superior direito para confirmar.
+                    Toque em <strong className="font-bold text-brand-red">"Adicionar"</strong> no canto superior direito para confirmar.
                   </div>
                 </div>
               </div>
