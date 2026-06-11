@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
 import { Layout } from '../components/Layout'
 import { 
-  Star, 
   ArrowRight, 
   ClipboardList, 
   History, 
@@ -129,13 +128,9 @@ export const Dashboard: React.FC = () => {
         />
         
         {/* Content */}
-        <div className="relative mx-auto max-w-7xl px-6 py-20 lg:py-28">
+        <div className="relative mx-auto max-w-7xl px-6 pt-8 pb-16 lg:pt-10 lg:pb-24">
           <div className="flex flex-col items-start">
-            <div className="inline-flex items-center gap-2 rounded-full bg-brand-gold/20 px-4 py-1.5 text-xs font-semibold text-brand-gold uppercase tracking-wider">
-              <Star size={14} fill="currentColor" /> Controle profissional
-            </div>
-            
-            <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
               Sistema de Controle <br />
               <span className="text-brand-gold">de Avarias & Visitas</span>
             </h1>
