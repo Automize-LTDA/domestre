@@ -13,6 +13,7 @@ import Relatorios from './pages/Relatorios'
 import Configuracoes from './pages/Configuracoes'
 import Admin from './pages/Admin'
 import Login from './pages/Login'
+import InstalarApp from './pages/InstalarApp'
 
 // Create React Query Client
 const queryClient = new QueryClient({
@@ -39,6 +40,7 @@ const App: React.FC = () => {
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/instalar" element={<InstalarApp />} />
               {/* Fallback route */}
               <Route path="*" element={<Dashboard />} />
             </Routes>

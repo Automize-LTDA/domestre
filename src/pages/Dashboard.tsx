@@ -10,10 +10,22 @@ import {
   History, 
   Settings,
   Calendar,
-  LoaderCircle
+  LoaderCircle,
+  Smartphone,
+  X
 } from 'lucide-react'
 
 export const Dashboard: React.FC = () => {
+  const [showInstallBanner, setShowInstallBanner] = React.useState(false)
+
+  React.useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone
+    const isDismissed = localStorage.getItem('domestre.install_banner_dismissed') === 'true'
+    if (!isStandalone && !isDismissed) {
+      setShowInstallBanner(true)
+    }
+  }, [])
+
   // Query stats from Supabase
   const { data: stats, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -70,6 +82,39 @@ export const Dashboard: React.FC = () => {
   return (
     <Layout>
       <div className="flex flex-col min-h-screen">
+      {/* PWA INSTALL BANNER */}
+      {showInstallBanner && (
+        <div className="bg-brand-navy border-b border-white/10 text-white py-3.5 px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-3 no-print transition-all duration-300">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-brand-gold/20 text-brand-gold flex items-center justify-center shrink-0">
+              <Smartphone size={18} />
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold">Instale o aplicativo do sistema!</p>
+              <p className="text-[10px] sm:text-xs text-white/70">Acesse de forma muito mais rápida e em tela cheia no Android e iOS.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/instalar"
+              className="px-3.5 py-1.5 rounded-xl bg-brand-gold text-brand-navy text-xs font-bold hover:scale-[1.02] transition-transform shadow-[var(--shadow-soft)]"
+            >
+              Como Instalar
+            </Link>
+            <button
+              onClick={() => {
+                localStorage.setItem('domestre.install_banner_dismissed', 'true')
+                setShowInstallBanner(false)
+              }}
+              className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
+              aria-label="Fechar"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* HERO SECTION */}
       <section className="relative overflow-hidden">
         {/* Background Gradients */}

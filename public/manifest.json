@@ -1,0 +1,32 @@
+{
+  "name": "Do Mestre - Controle de Avarias & Visitas",
+  "short_name": "Do Mestre",
+  "description": "Sistema de controle profissional de avarias de materiais e visitas a filiais.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d1b2a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon-mestre.png",
+      "sizes": "192x192 256x256 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Novo Relatório",
+      "short_name": "Novo Relatório",
+      "url": "/novo",
+      "description": "Registrar uma nova avaria"
+    },
+    {
+      "name": "Nova Visita",
+      "short_name": "Nova Visita",
+      "url": "/visitas/novo",
+      "description": "Registrar uma nova visita"
+    }
+  ]
+}

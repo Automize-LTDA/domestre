@@ -10,7 +10,8 @@ import {
   Building2,
   History,
   ClipboardList,
-  MapPin
+  MapPin,
+  Smartphone
 } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
 
@@ -29,7 +30,8 @@ const navLinks: NavLinkItem[] = [
   { to: '/', label: 'Início', icon: Building2 },
   { to: '/novo', label: 'Novo Relatório', icon: ClipboardList },
   { to: '/relatorios', label: 'Relatórios Gerados', icon: History },
-  { to: '/visitas/novo', label: 'Visita a Filiais', icon: MapPin }
+  { to: '/visitas/novo', label: 'Visita a Filiais', icon: MapPin },
+  { to: '/instalar', label: 'Instalar App', icon: Smartphone }
 ]
 
 export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }) => {
