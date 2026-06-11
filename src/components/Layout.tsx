@@ -58,9 +58,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
     )
   }
 
-  const activeLinks = role === 'admin' 
-    ? [...navLinks, { to: '/admin', label: 'Administração', icon: ShieldCheck }]
-    : navLinks
+  const activeLinks = navLinks.filter(link => {
+    // Esconder Relatórios Gerados para promotores
+    if (role === 'promotor' && link.to === '/relatorios') {
+      return false
+    }
+    return true
+  })
+
+  if (role === 'admin') {
+    activeLinks.push({ to: '/admin', label: 'Administração', icon: ShieldCheck })
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

@@ -6,9 +6,10 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   role: 'admin' | 'member' | 'promotor' | null
+  cargo: string | null
   fullName: string | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<{ cargo: string | null } | void>
   signOut: () => Promise<void>
   refreshRole: () => Promise<void>
 }
@@ -19,21 +20,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [role, setRole] = useState<'admin' | 'member' | 'promotor' | null>(null)
+  const [cargo, setCargo] = useState<string | null>(null)
   const [fullName, setFullName] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
 
   async function fetchUserRoleAndProfile(userId: string) {
     try {
-      const [roleRes, profileRes] = await Promise.all([
+      if (userId === '00000000-0000-0000-0000-000000000000') {
+        setRole('admin')
+        setCargo('admin')
+        setFullName('Administrador')
+        return
+      }
+
+      const [roleRes, profileRes, usuarioRes] = await Promise.all([
         supabase.rpc('get_user_role', { _user_id: userId }),
-        supabase.from('profiles').select('full_name').eq('id', userId).maybeSingle()
+        supabase.from('profiles').select('full_name').eq('id', userId).maybeSingle(),
+        supabase.from('usuarios').select('cargo, status').eq('id', userId).maybeSingle()
       ])
       
       setRole((roleRes.data as 'admin' | 'member' | 'promotor') || 'member')
       setFullName(profileRes.data?.full_name || null)
+
+      if (usuarioRes.data) {
+        const { cargo: userCargo, status } = usuarioRes.data
+        if (status === 'bloqueado') {
+          await signOut()
+          alert('Seu acesso foi bloqueado. Entre em contato com o administrador.')
+          return
+        }
+
+        setCargo(userCargo)
+
+        if (status === 'ativo') {
+          if (userCargo === 'admin' || userCargo === 'gestor' || userCargo === 'sup_tecnico') {
+            if (window.location.pathname !== '/login') {
+              const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:5174'
+              window.location.href = dashboardUrl
+            }
+            return
+          }
+        }
+      }
     } catch (err) {
       console.error('Error fetching user roles and profile:', err)
       setRole('member')
+      setCargo(null)
       setFullName(null)
     }
   }
@@ -87,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [])
 
-  async function signIn(email: string, password: string) {
+  async function signIn(email: string, password: string): Promise<{ cargo: string | null } | void> {
     const cleanEmail = email.trim().toLowerCase()
     if ((cleanEmail === 'admin' || cleanEmail === 'admin@domestre.com') && password === '123') {
       const mockUser = {
@@ -97,19 +129,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } as any
       setUser(mockUser)
       setRole('admin')
+      setCargo('admin')
       setFullName('Administrador')
       localStorage.setItem('domestre.mock_session', JSON.stringify(mockUser))
-      return
+      return { cargo: 'admin' }
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+
+    if (authData?.user) {
+      const { data: usuarioData, error: usuarioErr } = await supabase
+        .from('usuarios')
+        .select('cargo, status')
+        .eq('id', authData.user.id)
+        .maybeSingle()
+
+      if (usuarioErr) {
+        console.error('Error fetching user details on signin:', usuarioErr)
+      }
+
+      if (usuarioData) {
+        const { cargo: userCargo, status } = usuarioData
+        if (status === 'bloqueado') {
+          await supabase.auth.signOut()
+          throw new Error('Seu acesso foi bloqueado. Entre em contato com o administrador.')
+        }
+
+        if (status === 'ativo') {
+          return { cargo: userCargo }
+        }
+      }
+      return { cargo: null }
+    }
   }
 
   async function signOut() {
     localStorage.removeItem('domestre.mock_session')
     setUser(null)
     setRole(null)
+    setCargo(null)
     setFullName(null)
     setSession(null)
     try {
@@ -131,6 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         session,
         role,
+        cargo,
         fullName,
         loading,
         signIn,

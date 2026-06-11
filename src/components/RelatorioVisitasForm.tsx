@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { generateVisitPDF } from '../utils/pdfGenerator'
+
 import { 
   Save, 
-  Printer, 
-  FileDown, 
   LoaderCircle,
   Building2,
   MapPin,
@@ -68,12 +66,18 @@ export const RelatorioVisitasForm: React.FC = () => {
   async function fetchNextVisitNumber() {
     try {
       const year = new Date().getFullYear()
-      const { count } = await supabase
+      // Use MAX of existing numbers instead of COUNT to avoid duplicate key conflicts on deleted records
+      const { data } = await supabase
         .from('relatorios_visitas')
-        .select('*', { count: 'exact', head: true })
+        .select('numero')
         .like('numero', `V-${year}-%`)
+        .order('numero', { ascending: false })
+        .limit(1)
 
-      const nextNum = (count || 0) + 1
+      const lastNum = data?.[0]?.numero
+        ? parseInt(data[0].numero.split('-')[2]) || 0
+        : 0
+      const nextNum = lastNum + 1
       const generatedNumber = `V-${year}-${String(nextNum).padStart(4, '0')}`
       setForm(prev => {
         if (!prev.numero) {
@@ -109,10 +113,11 @@ export const RelatorioVisitasForm: React.FC = () => {
 
   // Auto-fill responsible user name when resolved
   useEffect(() => {
-    if (fullName && !form.responsavel) {
-      setForm(prev => ({ ...prev, responsavel: fullName }))
+    const defaultName = fullName || user?.email?.split('@')[0] || ''
+    if (defaultName) {
+      setForm(prev => ({ ...prev, responsavel: defaultName }))
     }
-  }, [fullName])
+  }, [fullName, user])
 
   // Save draft on change
   useEffect(() => {
@@ -317,40 +322,7 @@ export const RelatorioVisitasForm: React.FC = () => {
     } catch (e) {}
   }
 
-  async function handleGeneratePDF() {
-    if (!validateForm()) return
-    try {
-      await saveVisitToDatabase()
-      
-      const structuredData = {
-        horarioChegada: form.horarioChegada,
-        horarioSaida: form.horarioSaida,
-        local: form.local,
-        pontoExtra: form.pontoExtra,
-        tipoPontoExtra: form.tipoPontoExtra,
-        tipoPontoExtraOutro: form.tipoPontoExtraOutro,
-        materiaisPositivados: form.materiaisPositivados,
-        materiaisPositivadosOutro: form.materiaisPositivadosOutro,
-        preco: form.preco,
-        situacaoEstoque: form.situacaoEstoque,
-        ruptura: form.ruptura,
-      }
 
-      generateVisitPDF({
-        numero: form.numero,
-        empresa: form.empresa,
-        responsavel: form.responsavel,
-        data: form.data,
-        motivo: form.local,
-        atividades: getFormattedSummary(form),
-        observacoes: JSON.stringify(structuredData),
-        status: form.status
-      })
-      
-      resetForm()
-      showToast('Relatório de Visita gerado e exportado com sucesso!', 'success')
-    } catch (e) {}
-  }
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -761,7 +733,7 @@ export const RelatorioVisitasForm: React.FC = () => {
       {/* BOTTOM ACTIONS BAR */}
       <div className="flex flex-wrap gap-3 sticky bottom-4 z-10 no-print pt-4 bg-background/80 backdrop-blur-md border-t border-border">
         <button
-          onClick={handleGeneratePDF}
+          onClick={handleSave}
           disabled={loading}
           style={{ backgroundImage: 'var(--gradient-accent)' }}
           className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-brand-red-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02] active:scale-[0.99] transition-transform disabled:opacity-60 disabled:hover:scale-100"
@@ -769,31 +741,9 @@ export const RelatorioVisitasForm: React.FC = () => {
           {loading ? (
             <LoaderCircle className="animate-spin" size={18} />
           ) : (
-            <FileDown size={18} />
-          )}
-          Gerar Relatório PDF
-        </button>
-
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-navy px-5 py-3.5 text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
-        >
-          {loading ? (
-            <LoaderCircle className="animate-spin" size={18} />
-          ) : (
             <Save size={18} />
           )}
           Salvar
-        </button>
-
-        <button
-          onClick={() => window.print()}
-          disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-5 py-3.5 text-sm font-semibold text-foreground hover:bg-secondary transition-colors"
-        >
-          <Printer size={18} />
-          Imprimir
         </button>
       </div>
     </div>

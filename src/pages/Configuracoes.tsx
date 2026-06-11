@@ -75,12 +75,29 @@ export const Configuracoes: React.FC = () => {
     }
 
     try {
-      // Since delete policies restrict users to their own or admin access, this deletes visible items
+      // 1. Get all avarias reports created by this user first to delete child items first
+      const { data: userReports } = await supabase
+        .from('relatorios_avarias')
+        .select('id')
+        .eq('created_by', user?.id || '')
+
+      if (userReports && userReports.length > 0) {
+        const reportIds = userReports.map(r => r.id)
+        const { error: childErr } = await supabase
+          .from('itens_relatorio_avaria')
+          .delete()
+          .in('relatorio_id', reportIds)
+
+        if (childErr) throw childErr
+      }
+
+      // 2. Delete parent avarias reports
       const { error: avariasErr } = await supabase
         .from('relatorios_avarias')
         .delete()
         .eq('created_by', user?.id || '')
 
+      // 3. Delete visitas reports
       const { error: visitasErr } = await supabase
         .from('relatorios_visitas')
         .delete()

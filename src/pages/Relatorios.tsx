@@ -63,6 +63,15 @@ export const Relatorios: React.FC = () => {
         .eq('id', id)
         .single()
 
+      // 1. Delete child items first to avoid RLS/foreign key cascading issues
+      const { error: childError } = await supabase
+        .from('itens_relatorio_avaria')
+        .delete()
+        .eq('relatorio_id', id)
+
+      if (childError) throw childError
+
+      // 2. Delete parent report
       const { error } = await supabase
         .from('relatorios_avarias')
         .delete()

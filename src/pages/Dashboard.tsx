@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
 import { Layout } from '../components/Layout'
+import { useAuth } from '../context/AuthContext'
 import { 
   ArrowRight, 
   ClipboardList, 
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react'
 
 export const Dashboard: React.FC = () => {
+  const { role } = useAuth()
   const [showInstallBanner, setShowInstallBanner] = React.useState(false)
 
   React.useEffect(() => {
@@ -64,18 +66,20 @@ export const Dashboard: React.FC = () => {
       title: 'Nova Visita',
       desc: 'Registre visitas aos clientes e atividades realizadas.'
     },
-    {
-      to: '/relatorios',
-      icon: History,
-      title: 'Relatórios Gerados',
-      desc: 'Histórico completo, busca por empresa e exportações.'
-    },
-    {
-      to: '/configuracoes',
-      icon: Settings,
-      title: 'Configurações',
-      desc: 'Preferências do sistema e backups.'
-    }
+    ...(role !== 'promotor' ? [
+      {
+        to: '/relatorios',
+        icon: History,
+        title: 'Relatórios Gerados',
+        desc: 'Histórico completo, busca por empresa e exportações.'
+      },
+      {
+        to: '/configuracoes',
+        icon: Settings,
+        title: 'Configurações',
+        desc: 'Preferências do sistema e backups.'
+      }
+    ] : [])
   ]
 
   return (
@@ -153,12 +157,14 @@ export const Dashboard: React.FC = () => {
               >
                 Nova visita
               </Link>
-              <Link 
-                to="/relatorios" 
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
-              >
-                Ver histórico
-              </Link>
+              {role !== 'promotor' && (
+                <Link 
+                  to="/relatorios" 
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
+                >
+                  Ver histórico
+                </Link>
+              )}
             </div>
           </div>
         </div>

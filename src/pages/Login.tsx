@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -17,7 +17,7 @@ import logoUrl from '../assets/logo.png'
 import sideImgUrl from '../assets/login-side.png'
 
 export const Login: React.FC = () => {
-  const { signIn, user, loading } = useAuth()
+  const { signIn, user, cargo, fullName, loading } = useAuth()
   const { showToast } = useToast()
   const navigate = useNavigate()
   const location = useLocation()
@@ -29,6 +29,18 @@ export const Login: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [redirectingToDashboard, setRedirectingToDashboard] = useState(false)
+  
+  const redirectTimerRef = useRef<any>(null)
+
+  function handleCancelRedirect() {
+    if (redirectTimerRef.current) {
+      clearTimeout(redirectTimerRef.current)
+      redirectTimerRef.current = null
+    }
+    setRedirectingToDashboard(false)
+    navigate(redirectPath)
+  }
 
   // Redirect if already logged in
   const redirectPath = (location.state as any)?.redirect || '/'
@@ -44,9 +56,21 @@ export const Login: React.FC = () => {
 
   useEffect(() => {
     if (!loading && user) {
-      navigate(redirectPath)
+      const isAdminOrGestor = cargo === 'admin' || cargo === 'gestor' || cargo === 'sup_tecnico'
+      if (isAdminOrGestor) {
+        setRedirectingToDashboard(true)
+        const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:5174'
+        redirectTimerRef.current = setTimeout(() => {
+          window.location.href = dashboardUrl
+        }, 3000)
+        return () => {
+          if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current)
+        }
+      } else {
+        navigate(redirectPath)
+      }
     }
-  }, [user, loading, navigate, redirectPath])
+  }, [user, loading, cargo, navigate, redirectPath])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -66,13 +90,24 @@ export const Login: React.FC = () => {
         ? cleanUsername 
         : `${cleanUsername}@domestre.com`
 
-      await signIn(emailToAuth, password)
+      const res = await signIn(emailToAuth, password)
+      const cargoLogged = res?.cargo
 
       // Handle remember me persistence
       if (rememberMe) {
         localStorage.setItem('domestre.remembered_user', cleanUsername)
       } else {
         localStorage.removeItem('domestre.remembered_user')
+      }
+
+      if (cargoLogged === 'admin' || cargoLogged === 'gestor' || cargoLogged === 'sup_tecnico') {
+        setSuccessMessage(null)
+        setRedirectingToDashboard(true)
+        const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:5174'
+        redirectTimerRef.current = setTimeout(() => {
+          window.location.href = dashboardUrl
+        }, 3000)
+        return
       }
 
       setSuccessMessage('Redirecionando...')
@@ -99,6 +134,28 @@ export const Login: React.FC = () => {
       
       {/* CSS Animations */}
       <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+        @keyframes float-delayed {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(8px); }
+        }
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+        .animate-float-delayed {
+          animation: float-delayed 6s ease-in-out infinite;
+          animation-delay: 3s;
+        }
+        @keyframes progress-bar {
+          0% { width: 0%; }
+          100% { width: 100%; }
+        }
+        .animate-progress-bar {
+          animation: progress-bar linear forwards;
+        }
         @keyframes slide-up {
           0% { opacity: 0; transform: translateY(16px); }
           100% { opacity: 1; transform: translateY(0); }
@@ -125,20 +182,66 @@ export const Login: React.FC = () => {
         
         <div className="w-full max-w-sm space-y-8" style={{ width: '100%', maxWidth: '400px' }}>
           
-          {/* Centered Logo & Header */}
-          <div className="flex flex-col items-center text-center space-y-5">
-            <div className="w-fit p-3 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm transform hover:scale-[1.03] transition-transform duration-300">
-              <img src={logoUrl} alt="Logo Produtos Do Mestre" className="h-11 w-auto object-contain" />
+          {redirectingToDashboard ? (
+            <div className="space-y-6 text-center animate-fade-in">
+              {/* Logo */}
+              <div className="mx-auto w-fit p-3 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm transform hover:scale-[1.03] transition-transform duration-300">
+                <img src={logoUrl} alt="Logo Produtos Do Mestre" className="h-11 w-auto object-contain" />
+              </div>
+              
+              {/* Animated Redirect Card */}
+              <div className="relative overflow-hidden bg-gradient-to-r from-[#233A7A] to-[#1E2E5C] text-white p-6 rounded-2xl shadow-[var(--shadow-elegant)] border border-white/10 text-left">
+                {/* Background floating circles */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 animate-float" />
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-10 -mb-10 animate-float-delayed" />
+                
+                <div className="relative flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-xl bg-white/10 flex items-center justify-center text-brand-gold text-2xl shrink-0 animate-bounce">
+                    👑
+                  </div>
+                  <div className="space-y-1">
+                    <h2 className="text-base font-bold flex items-center gap-2">
+                      Acesso Administrativo Detectado!
+                    </h2>
+                    <p className="text-[11px] text-white/80 leading-relaxed">
+                      Olá, <span className="font-bold text-white">{fullName || 'Gestor'}</span>. Identificamos seu perfil de <span className="font-bold text-rose-300 uppercase">{cargo === 'admin' ? 'Administrador' : (cargo === 'gestor' ? 'Gestor' : 'Supervisor')}</span>. Redirecionando em instantes...
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Progress bar animation */}
+                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden mt-6 relative z-10">
+                  <div className="h-full bg-[#E53935] rounded-full animate-progress-bar" style={{ animationDuration: '3s' }} />
+                </div>
+
+                {/* Cancel Button */}
+                <div className="mt-5 flex justify-end relative z-10">
+                  <button
+                    type="button"
+                    onClick={handleCancelRedirect}
+                    className="px-4 py-2 text-xs font-bold text-white hover:text-rose-100 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl transition-all cursor-pointer"
+                  >
+                    Permanecer no Site Principal
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="space-y-1">
-              <h2 className="text-2xl font-bold font-display text-[#233A7A] tracking-wide">
-                Bem-vindo
-              </h2>
-              <p className="text-xs text-slate-400 max-w-xs">
-                Acesse seu painel administrativo utilizando suas credenciais.
-              </p>
-            </div>
-          </div>
+          ) : (
+            <>
+              {/* Centered Logo & Header */}
+              <div className="flex flex-col items-center text-center space-y-5">
+                <div className="w-fit p-3 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm transform hover:scale-[1.03] transition-transform duration-300">
+                  <img src={logoUrl} alt="Logo Produtos Do Mestre" className="h-11 w-auto object-contain" />
+                </div>
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-bold font-display text-[#233A7A] tracking-wide">
+                    Bem-vindo
+                  </h2>
+                  <p className="text-xs text-slate-400 max-w-xs">
+                    Acesse seu painel administrativo utilizando suas credenciais.
+                  </p>
+                </div>
+              </div>
 
           {/* Status Messages */}
           {errorMessage && (
@@ -246,6 +349,9 @@ export const Login: React.FC = () => {
             </button>
 
           </form>
+          </>
+          )
+          }
 
           {/* Institutional Footer */}
           <div className="pt-4 border-t border-slate-100 text-center space-y-2 flex flex-col items-center">

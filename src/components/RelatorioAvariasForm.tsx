@@ -2,13 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { generateReportPDF } from '../utils/pdfGenerator'
 import { 
   Minus, 
-  Printer, 
   Save, 
   Trash2,
-  FileDown,
   LoaderCircle
 } from 'lucide-react'
 
@@ -132,10 +129,11 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
 
   // Auto-fill responsible user name when it is resolved
   useEffect(() => {
-    if (fullName && !form.responsavel) {
-      setForm(prev => ({ ...prev, responsavel: fullName }))
+    const defaultName = fullName || user?.email?.split('@')[0] || ''
+    if (defaultName) {
+      setForm(prev => ({ ...prev, responsavel: defaultName }))
     }
-  }, [fullName])
+  }, [fullName, user])
 
   // Save draft to localStorage on change
   useEffect(() => {
@@ -352,19 +350,7 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
     }
   }
 
-  // Handle Generate PDF
-  async function handleGeneratePDF() {
-    if (!validateForm()) return
-    const prepared = getPreparedReport()
-    try {
-      await saveReportToDatabase(prepared)
-      generateReportPDF(prepared)
-      resetForm()
-      showToast('Relatório de Avarias gerado e exportado com sucesso!', 'success')
-    } catch (e) {
-      // Error handled inside saveReportToDatabase
-    }
-  }
+
 
   return (
     <div className={`space-y-6 ${compact ? 'space-y-4' : ''}`}>
@@ -389,9 +375,9 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
             </span>
             <input
               value={form.responsavel}
-              onChange={e => setForm({ ...form, responsavel: e.target.value })}
-              placeholder="Nome de quem registrou"
-              className="input"
+              disabled
+              placeholder="Identificando usuário..."
+              className="input bg-secondary/50 cursor-not-allowed text-muted-foreground font-semibold"
             />
           </label>
           <label className="block">
@@ -578,7 +564,7 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
       {/* BOTTOM ACTIONS BAR */}
       <div className="flex flex-wrap gap-3 sticky bottom-4 z-10 no-print">
         <button
-          onClick={handleGeneratePDF}
+          onClick={handleSave}
           disabled={loading}
           style={{ backgroundImage: 'var(--gradient-accent)' }}
           className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-brand-red-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02] active:scale-[0.99] transition-transform disabled:opacity-60 disabled:hover:scale-100"
@@ -586,31 +572,9 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
           {loading ? (
             <LoaderCircle className="animate-spin" size={18} />
           ) : (
-            <FileDown size={18} />
-          )}
-          Gerar Relatório PDF
-        </button>
-
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-navy px-5 py-3 text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
-        >
-          {loading ? (
-            <LoaderCircle className="animate-spin" size={18} />
-          ) : (
             <Save size={18} />
           )}
           Salvar
-        </button>
-
-        <button
-          onClick={() => window.print()}
-          disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold text-foreground hover:bg-secondary transition-colors"
-        >
-          <Printer size={18} />
-          Imprimir
         </button>
       </div>
     </div>

@@ -12,6 +12,7 @@ DROP FUNCTION IF EXISTS public.admin_create_user(text, text, text, text) CASCADE
 
 DROP TABLE IF EXISTS public.user_roles CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TABLE IF EXISTS public.usuarios CASCADE;
 DROP TABLE IF EXISTS public.materiais CASCADE;
 DROP TABLE IF EXISTS public.empresas CASCADE;
 DROP TABLE IF EXISTS public.itens_relatorio_avaria CASCADE;
@@ -25,6 +26,14 @@ CREATE TABLE public.profiles (
     id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
     full_name text,
     email text,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE public.usuarios (
+    id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL PRIMARY KEY,
+    email text,
+    cargo text NOT NULL CHECK (cargo IN ('admin', 'gestor', 'sup_tecnico', 'tecnico', 'funcionario', 'cliente')),
+    status text DEFAULT 'ativo' NOT NULL CHECK (status IN ('ativo', 'bloqueado')),
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -129,10 +138,12 @@ SECURITY DEFINER
 AS $$
 DECLARE
     default_role text := 'member';
+    default_cargo text := 'funcionario';
 BEGIN
     -- O primeiro usuário a se cadastrar será o administrador
     IF NOT EXISTS (SELECT 1 FROM public.profiles) THEN
         default_role := 'admin';
+        default_cargo := 'admin';
     END IF;
 
     INSERT INTO public.profiles (id, full_name, email)
@@ -146,6 +157,15 @@ BEGIN
     INSERT INTO public.user_roles (user_id, role)
     VALUES (NEW.id, default_role)
     ON CONFLICT (user_id, role) DO NOTHING;
+
+    INSERT INTO public.usuarios (id, email, cargo, status)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        default_cargo,
+        'ativo'
+    )
+    ON CONFLICT (id) DO NOTHING;
 
     RETURN NEW;
 END;
@@ -394,6 +414,7 @@ ON CONFLICT (name) DO NOTHING;
 
 -- 9. HABILITAR SEGURANÇA DE LINHA (RLS - Row Level Security)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.materiais ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.empresas ENABLE ROW LEVEL SECURITY;
@@ -409,6 +430,12 @@ ALTER TABLE public.configuracoes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view all profiles" ON public.profiles
     FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Users can update own profile" ON public.profiles
+    FOR UPDATE USING (auth.uid() = id OR auth.role() = 'anon');
+
+-- Usuarios
+CREATE POLICY "Users can view all usuarios" ON public.usuarios
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Users can update own usuario" ON public.usuarios
     FOR UPDATE USING (auth.uid() = id OR auth.role() = 'anon');
 
 -- Roles
@@ -448,18 +475,7 @@ CREATE POLICY "Anyone authenticated can view avarias items" ON public.itens_rela
 CREATE POLICY "Anyone authenticated can insert avarias items" ON public.itens_relatorio_avaria
     FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Admin or creator can delete avarias items" ON public.itens_relatorio_avaria
-    FOR DELETE USING (
-        EXISTS (
-            SELECT 1 FROM public.relatorios_avarias r
-            WHERE r.id = relatorio_id AND (
-                r.created_by = auth.uid() OR
-                r.created_by IS NULL OR
-                public.get_user_role(auth.uid()) = 'admin' OR
-                r.created_by = '00000000-0000-0000-0000-000000000000' OR
-                auth.role() = 'anon'
-            )
-        )
-    );
+    FOR DELETE USING (auth.role() IN ('authenticated', 'anon'));
 
 -- Visitas Reports
 CREATE POLICY "Anyone authenticated can view visitas reports" ON public.relatorios_visitas

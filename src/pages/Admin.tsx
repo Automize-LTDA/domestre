@@ -118,6 +118,14 @@ export const Admin: React.FC = () => {
       if (createErr) throw createErr
       if (!newUserId) throw new Error('Não foi possível criar o usuário.')
 
+      // Sync cargo in usuarios table to match new role
+      const { error: cargoErr } = await supabase
+        .from('usuarios')
+        .update({ cargo: newRole === 'admin' ? 'admin' : 'funcionario' })
+        .eq('id', newUserId)
+
+      if (cargoErr) throw cargoErr
+
       showToast('Usuário criado com sucesso!', 'success')
       setNewName('')
       setNewUsername('')
@@ -213,6 +221,14 @@ export const Admin: React.FC = () => {
           .insert({ user_id: editingUser.id, role: editRole })
 
         if (roleInsErr) throw roleInsErr
+
+        // Sync cargo in usuarios table to match new role
+        const { error: cargoErr } = await supabase
+          .from('usuarios')
+          .update({ cargo: editRole === 'admin' ? 'admin' : 'funcionario' })
+          .eq('id', editingUser.id)
+
+        if (cargoErr) throw cargoErr
       }
 
       // 4. Log in history
@@ -252,31 +268,26 @@ export const Admin: React.FC = () => {
     const targetUsername = targetUser.email ? (targetUser.email.endsWith('@domestre.com') ? targetUser.email.split('@')[0] : targetUser.email) : 'Usuário'
     const isMockUser = user?.id === '00000000-0000-0000-0000-000000000000'
     try {
-      if (nextRole === 'admin') {
-        const { error: insErr } = await supabase
-          .from('user_roles')
-          .insert({ user_id: targetUser.id, role: 'admin' })
+      // Delete all existing roles for this user to prevent duplicates
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', targetUser.id)
 
-        if (insErr && !insErr.message.includes('duplicate')) throw insErr
+      // Insert nextRole
+      const { error: insErr } = await supabase
+        .from('user_roles')
+        .insert({ user_id: targetUser.id, role: nextRole })
 
-        await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', targetUser.id)
-          .eq('role', 'member')
-      } else {
-        await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', targetUser.id)
-          .eq('role', 'admin')
+      if (insErr) throw insErr
 
-        const { error: insErr } = await supabase
-          .from('user_roles')
-          .insert({ user_id: targetUser.id, role: 'member' })
+      // Sync cargo in usuarios table to match new role
+      const { error: cargoErr } = await supabase
+        .from('usuarios')
+        .update({ cargo: nextRole === 'admin' ? 'admin' : 'funcionario' })
+        .eq('id', targetUser.id)
 
-        if (insErr && !insErr.message.includes('duplicate')) throw insErr
-      }
+      if (cargoErr) throw cargoErr
 
       // Log in history
       await supabase.from('historico').insert({
