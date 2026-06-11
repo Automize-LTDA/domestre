@@ -248,21 +248,21 @@ export const Login: React.FC = () => {
           </form>
 
           {/* Institutional Footer */}
-          <div className="pt-4 border-t border-slate-100 text-center space-y-1">
+          <div className="pt-4 border-t border-slate-100 text-center space-y-2 flex flex-col items-center">
             <p className="text-[11px] text-slate-400">
               © {new Date().getFullYear()} Do Mestre
             </p>
-            <p className="text-[11px] text-slate-400">
-              Desenvolvido pela{' '}
+            <div className="flex items-center gap-1 text-[11px] text-slate-400 animate-float-gentle">
+              <span>Desenvolvido pela</span>
               <a
                 href="https://automize-one.vercel.app/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium text-[#233A7A] hover:underline"
+                className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-secondary/80 border border-border text-foreground hover:text-brand-red hover:border-brand-red/30 transition-all duration-300 font-semibold shadow-[var(--shadow-soft)]"
               >
                 Automize
               </a>
-            </p>
+            </div>
           </div>
 
         </div>
