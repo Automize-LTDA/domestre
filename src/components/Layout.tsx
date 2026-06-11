@@ -197,13 +197,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
           </div>
 
           {/* Lado direito: Crédito de desenvolvimento */}
-          <div className="flex items-center gap-1 text-muted-foreground">
+          <div className="flex items-center gap-1 text-muted-foreground animate-float-gentle">
             <span>Desenvolvido pela</span>
             <a
               href="https://automize-one.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center px-2.5 py-1 rounded-lg bg-secondary/80 border border-border text-foreground hover:text-brand-red hover:border-brand-red/30 transition-all duration-300 font-semibold shadow-[var(--shadow-soft)] animate-float-gentle"
+              className="inline-flex items-center px-2.5 py-1 rounded-lg bg-secondary/80 border border-border text-foreground hover:text-brand-red hover:border-brand-red/30 transition-all duration-300 font-semibold shadow-[var(--shadow-soft)]"
             >
               Automize
             </a>

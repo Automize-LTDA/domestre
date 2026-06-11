@@ -4,15 +4,12 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { generateReportPDF } from '../utils/pdfGenerator'
 import { 
-  Check, 
   Minus, 
-  Pencil, 
   Printer, 
   Save, 
   Trash2,
   FileDown,
-  LoaderCircle,
-  X
+  LoaderCircle
 } from 'lucide-react'
 
 // Material list
@@ -90,9 +87,6 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
   })
 
   const [loading, setLoading] = useState(false)
-  const [editingItemId, setEditingItemId] = useState<string | null>(null)
-  const [editQty, setEditQty] = useState('')
-  const [editAvaria, setEditAvaria] = useState('')
   const [isLoaded, setIsLoaded] = useState(false)
 
   // Fetch next report number from Supabase using MAX to avoid duplicate key conflicts
@@ -218,29 +212,26 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
     }))
   }
 
-  // Start inline editing of an item
-  function handleStartEdit(item: ReportItem) {
-    setEditingItemId(item.id)
-    setEditQty(String(item.quantidade))
-    setEditAvaria(item.tipoAvaria)
-  }
-
-  // Save inline edit
-  function handleSaveEdit(itemId: string) {
-    const qty = Number(editQty)
-    if (!qty || qty <= 0) {
-      showToast('Quantidade deve ser um número válido maior que zero.', 'error')
-      return
-    }
+  // Update item quantity directly
+  function handleUpdateItemQty(itemId: string, qtyStr: string) {
+    const qty = Number(qtyStr)
+    if (isNaN(qty) || qty <= 0) return
     setForm(prev => ({
       ...prev,
       itens: prev.itens.map(item => 
-        item.id === itemId 
-          ? { ...item, quantidade: qty, tipoAvaria: editAvaria }
-          : item
+        item.id === itemId ? { ...item, quantidade: qty } : item
       )
     }))
-    setEditingItemId(null)
+  }
+
+  // Update item observation/avaria directly
+  function handleUpdateItemAvaria(itemId: string, avaria: string) {
+    setForm(prev => ({
+      ...prev,
+      itens: prev.itens.map(item => 
+        item.id === itemId ? { ...item, tipoAvaria: avaria } : item
+      )
+    }))
   }
 
   // Validate form before save/export
@@ -518,83 +509,43 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                   <th className="py-3 px-3">Material</th>
-                  <th className="py-3 px-3 w-32">Quantidade</th>
-                  <th className="py-3 px-3">Tipo de avaria</th>
-                  <th className="py-3 px-3 w-32 text-right">Ações</th>
+                  <th className="py-3 px-3 w-32 text-center">Quantidade</th>
+                  <th className="py-3 px-3">Observação / Tipo de avaria</th>
+                  <th className="py-3 px-3 w-20 text-center text-right">Remover</th>
                 </tr>
               </thead>
               <tbody>
                 {form.itens.map(item => {
-                  const isEditing = editingItemId === item.id
                   return (
                     <tr key={item.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
                       <td className="py-3 px-3 font-semibold text-foreground">{item.material}</td>
-                      <td className="py-3 px-3">
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            min="1"
-                            value={editQty}
-                            onChange={e => setEditQty(e.target.value)}
-                            className="input h-9 w-20"
-                          />
-                        ) : (
-                          <span className="font-mono">{item.quantidade}</span>
-                        )}
+                      <td className="py-3 px-3 text-center">
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantidade}
+                          onChange={e => handleUpdateItemQty(item.id, e.target.value)}
+                          className="input h-9 w-20 font-mono text-center mx-auto"
+                        />
                       </td>
-                      <td className="py-3 px-3 text-muted-foreground">
-                        {isEditing ? (
-                          <input
-                            value={editAvaria}
-                            onChange={e => setEditAvaria(e.target.value)}
-                            className="input h-9"
-                          />
-                        ) : (
-                          item.tipoAvaria || <span className="italic opacity-60">Padrão do relatório</span>
-                        )}
+                      <td className="py-3 px-3">
+                        <input
+                          type="text"
+                          value={item.tipoAvaria}
+                          onChange={e => handleUpdateItemAvaria(item.id, e.target.value)}
+                          placeholder="Ex: Embalagem rasgada / Obs. adicional..."
+                          className="input h-9 w-full"
+                        />
                       </td>
                       <td className="py-3 px-3 text-right">
-                        <div className="inline-flex gap-1">
-                          {isEditing ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleSaveEdit(item.id)}
-                                title="Salvar"
-                                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border text-foreground hover:bg-secondary transition-colors"
-                              >
-                                <Check size={16} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditingItemId(null)}
-                                title="Cancelar"
-                                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border text-foreground hover:bg-secondary transition-colors"
-                              >
-                                <X size={16} />
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleStartEdit(item)}
-                                title="Editar"
-                                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border text-foreground hover:bg-secondary transition-colors"
-                              >
-                                <Pencil size={16} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItem(item.id)}
-                                title="Remover"
-                                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </>
-                          )}
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(item.id)}
+                          title="Remover Item"
+                          className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </td>
                     </tr>
                   )
