@@ -28,6 +28,7 @@ export const InstalarApp: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isInstalled, setIsInstalled] = useState(false)
   const [showIosModal, setShowIosModal] = useState(false)
+  const [showAndroidAlert, setShowAndroidAlert] = useState(false)
 
   useEffect(() => {
     // Detectar plataforma
@@ -66,7 +67,7 @@ export const InstalarApp: React.FC = () => {
 
   const handleAndroidInstall = async () => {
     if (!deferredPrompt) {
-      alert("A instalação rápida não está disponível neste momento. Por favor, use as instruções do Passo a Passo Manual abaixo.")
+      setShowAndroidAlert(true)
       return
     }
     
@@ -339,6 +340,59 @@ export const InstalarApp: React.FC = () => {
                 className="w-full py-2.5 rounded-xl bg-brand-navy text-primary-foreground text-xs font-bold hover:opacity-90 transition cursor-pointer"
               >
                 Entendi, vou instalar!
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+      {/* MODAL DE AVISO ANDROID */}
+      {showAndroidAlert && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-card w-full max-w-md rounded-t-3xl sm:rounded-2xl border border-border shadow-[var(--shadow-elegant)] overflow-hidden flex flex-col">
+            
+            {/* Header do Modal */}
+            <div className="flex items-center justify-between p-5 border-b border-border bg-amber-500/10 text-amber-800 dark:text-amber-500">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <Info size={18} />
+                <span>Instalação do Aplicativo</span>
+              </div>
+              <button 
+                onClick={() => setShowAndroidAlert(false)}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Conteúdo do Modal */}
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-foreground leading-relaxed font-bold">
+                A instalação rápida automática não está disponível no seu navegador neste momento.
+              </p>
+              
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Isso geralmente acontece por alguns motivos comuns:
+              </p>
+
+              <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1.5">
+                <li>O aplicativo já está instalado no seu dispositivo celular.</li>
+                <li>Você não está utilizando o navegador <strong>Google Chrome</strong> oficial.</li>
+                <li>O site está rodando em ambiente local de teste (localhost) sem criptografia segura.</li>
+              </ul>
+
+              <div className="p-3.5 bg-brand-navy/5 border border-brand-navy/10 rounded-xl text-xs text-brand-navy dark:text-foreground leading-normal font-medium mt-2">
+                Por favor, siga as instruções rápidas do <strong>Passo a Passo Manual</strong> logo abaixo na página para fixar o sistema na tela inicial.
+              </div>
+            </div>
+
+            {/* Rodapé do Modal */}
+            <div className="p-4 border-t border-border bg-secondary/20 text-center">
+              <button
+                onClick={() => setShowAndroidAlert(false)}
+                className="w-full py-2.5 rounded-xl bg-brand-navy text-primary-foreground text-xs font-bold hover:opacity-90 transition cursor-pointer"
+              >
+                Entendi, ver Passo a Passo
               </button>
             </div>
 
