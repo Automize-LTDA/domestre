@@ -73,6 +73,11 @@
   --shadow-glow: 0 0 30px -5px oklch(55% .22 27 / 0.35);
   
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Automize text animation variables */
+  --automize-g1: #0070f3;
+  --automize-g2: #7928ca;
+  --automize-g3: #ff0080;
 }
 
 .dark {
@@ -103,6 +108,11 @@
   --border: oklch(100% 0 0 / 0.1);
   --input: oklch(100% 0 0 / 0.15);
   --ring: oklch(55.1% .027 264.364);
+
+  /* Automize text animation variables (dark mode) */
+  --automize-g1: #0070f3;
+  --automize-g2: #7928ca;
+  --automize-g3: #ff0080;
 }
 
 /* Base custom styles */
@@ -187,6 +197,41 @@ input[type="number"] {
 
 .animate-float-gentle {
   animation: floatGentle 3s ease-in-out infinite;
+}
+
+@keyframes textShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-automize-text {
+  background: linear-gradient(
+    120deg,
+    var(--automize-g1) 0%,
+    var(--automize-g2) 50%,
+    var(--automize-g3) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  animation: textShimmer 3s ease-in-out infinite;
+  display: inline-block;
+  font-weight: 700;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.animate-automize-text:hover {
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 4px var(--automize-g2));
 }
 
 /* Print CSS Styles */

@@ -203,7 +203,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
               href="https://automize-one.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center px-2.5 py-1 rounded-lg bg-secondary/80 border border-border text-foreground hover:text-brand-red hover:border-brand-red/30 transition-all duration-300 font-semibold shadow-[var(--shadow-soft)]"
+              className="animate-automize-text"
             >
               Automize
             </a>
