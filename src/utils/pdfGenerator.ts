@@ -116,12 +116,14 @@ export function generateReportPDF(data: PDFReportData) {
 
   // Signature Block
   const sigY = height - 100
+  const sigWidth = 240
+  const sigStartX = (width - sigWidth) / 2
   doc.setDrawColor(120)
   doc.setLineWidth(0.5)
-  doc.line(margin, sigY, margin + 240, sigY)
+  doc.line(sigStartX, sigY, sigStartX + sigWidth, sigY)
   doc.setFontSize(9)
   doc.setTextColor(100)
-  doc.text('Assinatura do promotor ou do emitente', margin, sigY + 14)
+  doc.text('Assinatura do Responsável', width / 2, sigY + 14, { align: 'center' })
 
   // Footer metadata
   doc.setFontSize(8)
@@ -268,12 +270,14 @@ export function generateVisitPDF(data: PDFVisitData) {
 
   // Signature Block
   const sigY = height - 100
+  const sigWidth = 240
+  const sigStartX = (width - sigWidth) / 2
   doc.setDrawColor(120)
   doc.setLineWidth(0.5)
-  doc.line(margin, sigY, margin + 240, sigY)
+  doc.line(sigStartX, sigY, sigStartX + sigWidth, sigY)
   doc.setFontSize(9)
   doc.setTextColor(100)
-  doc.text('Assinatura do promotor ou do emitente', margin, sigY + 14)
+  doc.text('Assinatura do Responsável', width / 2, sigY + 14, { align: 'center' })
 
   // Footer metadata
   doc.setFontSize(8)
