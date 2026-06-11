@@ -11,7 +11,8 @@ import {
   History,
   ClipboardList,
   MapPin,
-  Smartphone
+  Smartphone,
+  Heart
 } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
 
@@ -186,19 +187,32 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
       </main>
 
       {/* FOOTER */}
-      <footer className="border-t border-border bg-card py-6 text-center text-xs text-muted-foreground space-y-1 no-print">
-        <p className="font-semibold text-foreground">Since 2026 — Do Mestre</p>
-        <p>
-          Desenvolvido pela{' '}
-          <a
-            href="https://automize-one.vercel.app/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-brand-red hover:underline"
-          >
-            Automize
-          </a>
-        </p>
+      <footer className="border-t border-border/80 bg-card/60 backdrop-blur-md py-8 no-print mt-auto">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+          
+          {/* Lado esquerdo: Copyright & Marca */}
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <span className="font-bold text-foreground">Do Mestre</span>
+            <span className="opacity-40">•</span>
+            <span>© {new Date().getFullYear()} — Todos os direitos reservados.</span>
+          </div>
+
+          {/* Lado direito: Crédito de desenvolvimento */}
+          <div className="flex items-center gap-1.5 text-muted-foreground flex-wrap justify-center">
+            <span>Orgulhosamente desenvolvido com</span>
+            <Heart size={12} className="text-brand-red animate-pulse" fill="currentColor" />
+            <span>pela</span>
+            <a
+              href="https://automize-one.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-2.5 py-1 rounded-lg bg-secondary/80 border border-border text-foreground hover:text-brand-red hover:border-brand-red/30 transition-all duration-300 font-semibold shadow-[var(--shadow-soft)] hover:-translate-y-0.5"
+            >
+              Automize
+            </a>
+          </div>
+
+        </div>
       </footer>
     </div>
   )
