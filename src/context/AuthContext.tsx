@@ -56,7 +56,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (userCargo === 'admin' || userCargo === 'gestor' || userCargo === 'sup_tecnico') {
             if (window.location.pathname !== '/login') {
               const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:5174'
-              window.location.href = dashboardUrl
+              const mockSession = localStorage.getItem('domestre.mock_session')
+              
+              // Obter sessão atual para realizar o SSO
+              const { data: { session: currentSession } } = await supabase.auth.getSession()
+              let finalUrl = dashboardUrl
+              
+              if (mockSession) {
+                finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'mock=true'
+              } else if (currentSession) {
+                finalUrl += (finalUrl.includes('?') ? '&' : '?') + `access_token=${currentSession.access_token}&refresh_token=${currentSession.refresh_token}`
+              }
+              window.location.href = finalUrl
             }
             return
           }

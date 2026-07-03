@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { supabase } from '../supabaseClient'
 import { 
   Eye, 
   EyeOff, 
@@ -17,7 +18,7 @@ import logoUrl from '../assets/logo.png'
 import sideImgUrl from '../assets/login-side.png'
 
 export const Login: React.FC = () => {
-  const { signIn, user, cargo, fullName, loading } = useAuth()
+  const { signIn, user, cargo, fullName, loading, session } = useAuth()
   const { showToast } = useToast()
   const navigate = useNavigate()
   const location = useLocation()
@@ -63,7 +64,14 @@ export const Login: React.FC = () => {
         setRedirectingToDashboard(true)
         const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:5174'
         redirectTimerRef.current = setTimeout(() => {
-          window.location.href = dashboardUrl
+          const mockSession = localStorage.getItem('domestre.mock_session')
+          let finalUrl = dashboardUrl
+          if (mockSession) {
+            finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'mock=true'
+          } else if (session) {
+            finalUrl += (finalUrl.includes('?') ? '&' : '?') + `access_token=${session.access_token}&refresh_token=${session.refresh_token}`
+          }
+          window.location.href = finalUrl
         }, 3000)
         return () => {
           if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current)
@@ -72,7 +80,7 @@ export const Login: React.FC = () => {
         navigate(redirectPath)
       }
     }
-  }, [user, loading, cargo, navigate, redirectPath, redirectingToDashboard])
+  }, [user, loading, cargo, navigate, redirectPath, redirectingToDashboard, session])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -106,8 +114,18 @@ export const Login: React.FC = () => {
         setSuccessMessage(null)
         setRedirectingToDashboard(true)
         const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:5174'
-        redirectTimerRef.current = setTimeout(() => {
-          window.location.href = dashboardUrl
+        redirectTimerRef.current = setTimeout(async () => {
+          const mockSession = localStorage.getItem('domestre.mock_session')
+          let finalUrl = dashboardUrl
+          if (mockSession) {
+            finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'mock=true'
+          } else {
+            const { data: { session: currentSession } } = await supabase.auth.getSession()
+            if (currentSession) {
+              finalUrl += (finalUrl.includes('?') ? '&' : '?') + `access_token=${currentSession.access_token}&refresh_token=${currentSession.refresh_token}`
+            }
+          }
+          window.location.href = finalUrl
         }, 3000)
         return
       }
