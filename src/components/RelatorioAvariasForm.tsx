@@ -91,32 +91,7 @@ function SectionBadge({ filled }: { filled: boolean }) {
   )
 }
 
-// ── Progress Bar ─────────────────────────────────────────────────────────────
-function ProgressBar({ percent }: { percent: number }) {
-  const color =
-    percent >= 100 ? '#10b981' :
-    percent >= 60  ? '#f59e0b' :
-                     '#ef4444'
 
-  return (
-    <div className="sticky top-[64px] md:top-[80px] z-20 bg-background/95 backdrop-blur-sm border-b border-border py-3 mb-2 no-print">
-      <div className="flex items-center justify-between mb-1.5 px-1">
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Progresso do formulário
-        </span>
-        <span className="text-xs font-bold tabular-nums" style={{ color }}>
-          {percent}%
-        </span>
-      </div>
-      <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-500 ease-out"
-          style={{ width: `${percent}%`, background: color, boxShadow: percent > 0 ? `0 0 8px ${color}55` : 'none' }}
-        />
-      </div>
-    </div>
-  )
-}
 
 // ── Success Overlay ──────────────────────────────────────────────────────────
 function SuccessOverlay({ report, onNew }: { report: ReportData; onNew: () => void }) {
@@ -494,9 +469,6 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
       )}
 
       <div className={`space-y-6 ${compact ? 'space-y-4' : ''}`}>
-        {/* PROGRESS BAR */}
-        <ProgressBar percent={completionPercent} />
-
         {/* SECTION 1: REPORT DATA */}
         <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)]">
           <div className="flex items-center justify-between mb-4">

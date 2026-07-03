@@ -126,32 +126,7 @@ function SuccessOverlay({ form, onNew }: { form: VisitFormState; onNew: () => vo
   )
 }
 
-// ── Progress Bar ─────────────────────────────────────────────────────────────
-function ProgressBar({ percent }: { percent: number }) {
-  const color =
-    percent >= 100 ? '#10b981' :
-    percent >= 60  ? '#f59e0b' :
-                     '#ef4444'
 
-  return (
-    <div className="sticky top-[64px] md:top-[80px] z-20 bg-background/95 backdrop-blur-sm border-b border-border px-0 py-3 -mx-0 mb-2 no-print">
-      <div className="flex items-center justify-between mb-1.5 px-1">
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Progresso do formulário
-        </span>
-        <span className="text-xs font-bold tabular-nums" style={{ color }}>
-          {percent}%
-        </span>
-      </div>
-      <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-500 ease-out"
-          style={{ width: `${percent}%`, background: color, boxShadow: percent > 0 ? `0 0 8px ${color}55` : 'none' }}
-        />
-      </div>
-    </div>
-  )
-}
 
 export const RelatorioVisitasForm: React.FC = () => {
   const { user, fullName } = useAuth()
@@ -467,9 +442,6 @@ export const RelatorioVisitasForm: React.FC = () => {
       )}
 
       <div className="space-y-6 max-w-3xl mx-auto">
-        {/* PROGRESS BAR */}
-        <ProgressBar percent={completionPercent} />
-
         {/* METADATA TOP BAR */}
         <div className="rounded-2xl bg-card border border-border p-4 shadow-[var(--shadow-soft)] flex flex-wrap gap-4 items-center justify-between text-sm">
           <div className="flex gap-4">
