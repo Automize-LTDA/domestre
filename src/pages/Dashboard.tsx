@@ -189,91 +189,145 @@ export const Dashboard: React.FC = () => {
 
       {/* ── PROMOTER: Visited today banner ─────────────────────────────────── */}
       {visitedToday && !reminderDismissed && (
-        <div className="bg-emerald-600/10 border-b border-emerald-500/30 text-emerald-700 dark:text-emerald-400 py-3 px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-3 no-print">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
-              <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />
+        <div className="relative overflow-hidden border-b border-emerald-500/20 no-print"
+          style={{ background: 'linear-gradient(90deg, #064e3b 0%, #065f46 50%, #047857 100%)' }}>
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+                <CheckCircle2 size={16} className="text-emerald-300" />
+              </div>
+              <p className="text-sm font-bold text-white">
+                ✅ Ótimo trabalho! Você já registrou uma visita hoje.
+              </p>
             </div>
-            <p className="text-sm font-semibold">
-              ✅ Ótimo trabalho! Você já registrou uma visita hoje.
-            </p>
+            <button
+              onClick={dismissReminder}
+              className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"
+              aria-label="Fechar"
+            >
+              <X size={15} />
+            </button>
           </div>
-          <button
-            onClick={dismissReminder}
-            className="p-1.5 rounded-lg hover:bg-emerald-500/20 transition-colors cursor-pointer text-emerald-600 dark:text-emerald-400"
-            aria-label="Fechar"
-          >
-            <X size={15} />
-          </button>
         </div>
       )}
 
       {/* ── PROMOTER: Soft reminder (não visitou hoje, < 3 dias) ──────────── */}
       {showSoftReminder && (
-        <div className="bg-amber-500/10 border-b border-amber-500/30 py-3.5 px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-3 no-print">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
-              <Bell size={16} className="text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-400">
-                Você ainda não registrou uma visita hoje!
-              </p>
-              <p className="text-[10px] sm:text-xs text-amber-600/80 dark:text-amber-500/80">
-                {promoterActivity?.lastVisitDate
-                  ? `Último registro: ${new Date(promoterActivity.lastVisitDate).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })}`
-                  : 'Nenhum registro encontrado ainda.'}
-              </p>
-            </div>
+        <div
+          className="relative overflow-hidden no-print"
+          style={{
+            background: 'linear-gradient(90deg, #78350f 0%, #92400e 40%, #b45309 100%)'
+          }}
+        >
+          {/* Animated pulse ring */}
+          <div className="pointer-events-none absolute left-4 sm:left-8 top-1/2 -translate-y-1/2">
+            <span className="absolute inline-flex h-10 w-10 rounded-full bg-amber-400/30 animate-ping" />
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              to="/visitas/novo"
-              className="px-3.5 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-bold hover:scale-[1.02] transition-transform shadow-sm"
-            >
-              Registrar agora
-            </Link>
-            <button
-              onClick={dismissReminder}
-              className="p-1.5 rounded-lg hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 transition-colors cursor-pointer"
-              aria-label="Fechar lembrete"
-            >
-              <X size={15} />
-            </button>
+
+          {/* Subtle diagonal stripe overlay */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-10"
+            style={{
+              backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.3) 8px, rgba(255,255,255,0.3) 9px)'
+            }}
+          />
+
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {/* Icon with pulse */}
+                <div className="relative shrink-0">
+                  <div className="h-11 w-11 rounded-full bg-amber-400/25 border-2 border-amber-300/50 flex items-center justify-center">
+                    <Bell size={20} className="text-amber-200" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm sm:text-base font-black text-white tracking-tight">
+                    ⚠️ Você ainda não registrou uma visita hoje!
+                  </p>
+                  <p className="text-[11px] sm:text-xs text-amber-200/80 mt-0.5">
+                    {promoterActivity?.lastVisitDate
+                      ? `Último registro: ${new Date(promoterActivity.lastVisitDate).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })}`
+                      : 'Nenhum registro encontrado ainda. Comece agora!'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 ml-auto sm:ml-0">
+                <Link
+                  to="/visitas/novo"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-amber-800 text-xs sm:text-sm font-black hover:scale-[1.03] active:scale-[0.98] transition-transform shadow-lg"
+                >
+                  <Calendar size={15} />
+                  Registrar agora
+                </Link>
+                <button
+                  onClick={dismissReminder}
+                  className="p-2 rounded-lg hover:bg-white/15 text-white/60 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Fechar lembrete"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* ── PROMOTER: Urgent reminder (3+ dias sem visita) ────────────────── */}
       {showUrgentReminder && (
-        <div className="bg-red-500/10 border-b border-red-500/30 py-3.5 px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-3 no-print">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
-              <AlertTriangle size={16} className="text-red-500" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm font-bold text-red-600 dark:text-red-400">
-                Atenção! Você não registra visitas há {promoterActivity!.daysSinceLastVisit} dias.
-              </p>
-              <p className="text-[10px] sm:text-xs text-red-500/80 dark:text-red-400/80">
-                Mantenha seus registros em dia para garantir o acompanhamento correto.
-              </p>
-            </div>
+        <div
+          className="relative overflow-hidden no-print"
+          style={{
+            background: 'linear-gradient(90deg, #7f1d1d 0%, #991b1b 40%, #b91c1c 100%)'
+          }}
+        >
+          {/* Animated pulse ring */}
+          <div className="pointer-events-none absolute left-4 sm:left-8 top-1/2 -translate-y-1/2">
+            <span className="absolute inline-flex h-10 w-10 rounded-full bg-red-400/40 animate-ping" />
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              to="/visitas/novo"
-              className="px-3.5 py-1.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:scale-[1.02] transition-transform shadow-sm"
-            >
-              Registrar agora
-            </Link>
-            <button
-              onClick={dismissReminder}
-              className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-500 transition-colors cursor-pointer"
-              aria-label="Fechar lembrete"
-            >
-              <X size={15} />
-            </button>
+
+          {/* Diagonal stripes */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-10"
+            style={{
+              backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.3) 8px, rgba(255,255,255,0.3) 9px)'
+            }}
+          />
+
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="relative shrink-0">
+                  <div className="h-11 w-11 rounded-full bg-red-400/25 border-2 border-red-300/50 flex items-center justify-center">
+                    <AlertTriangle size={20} className="text-red-200" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm sm:text-base font-black text-white tracking-tight">
+                    🚨 Atenção! Você não registra visitas há {promoterActivity!.daysSinceLastVisit} dias!
+                  </p>
+                  <p className="text-[11px] sm:text-xs text-red-200/80 mt-0.5">
+                    Mantenha seus registros em dia para garantir o acompanhamento correto.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 ml-auto sm:ml-0">
+                <Link
+                  to="/visitas/novo"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-red-700 text-xs sm:text-sm font-black hover:scale-[1.03] active:scale-[0.98] transition-transform shadow-lg"
+                >
+                  <Calendar size={15} />
+                  Registrar agora
+                </Link>
+                <button
+                  onClick={dismissReminder}
+                  className="p-2 rounded-lg hover:bg-white/15 text-white/60 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Fechar lembrete"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
