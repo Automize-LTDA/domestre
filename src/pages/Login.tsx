@@ -33,12 +33,23 @@ export const Login: React.FC = () => {
   const [redirectingToDashboard, setRedirectingToDashboard] = useState(false)
   
   const redirectTimerRef = useRef<any>(null)
+  const hasStartedRedirect = useRef(false)
+
+  // Unmount cleanup
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current)
+      }
+    }
+  }, [])
 
   function handleCancelRedirect() {
     if (redirectTimerRef.current) {
       clearTimeout(redirectTimerRef.current)
       redirectTimerRef.current = null
     }
+    hasStartedRedirect.current = false
     setRedirectingToDashboard(false)
     navigate(redirectPath)
   }
@@ -57,10 +68,11 @@ export const Login: React.FC = () => {
 
   useEffect(() => {
     if (!loading && user) {
-      if (redirectingToDashboard) return
+      if (hasStartedRedirect.current) return
 
       const isAdminOrGestor = cargo === 'admin' || cargo === 'gestor' || cargo === 'sup_tecnico'
       if (isAdminOrGestor) {
+        hasStartedRedirect.current = true
         setRedirectingToDashboard(true)
         const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:5174'
         redirectTimerRef.current = setTimeout(() => {
@@ -73,14 +85,11 @@ export const Login: React.FC = () => {
           }
           window.location.href = finalUrl
         }, 3000)
-        return () => {
-          if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current)
-        }
       } else if (cargo !== null) {
         navigate(redirectPath)
       }
     }
-  }, [user, loading, cargo, navigate, redirectPath, redirectingToDashboard, session])
+  }, [user, loading, cargo, navigate, redirectPath, session])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -112,6 +121,7 @@ export const Login: React.FC = () => {
 
       if (cargoLogged === 'admin' || cargoLogged === 'gestor' || cargoLogged === 'sup_tecnico') {
         setSuccessMessage(null)
+        hasStartedRedirect.current = true
         setRedirectingToDashboard(true)
         const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:5174'
         redirectTimerRef.current = setTimeout(async () => {
