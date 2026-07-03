@@ -56,6 +56,8 @@ export const Login: React.FC = () => {
 
   useEffect(() => {
     if (!loading && user) {
+      if (redirectingToDashboard) return
+
       const isAdminOrGestor = cargo === 'admin' || cargo === 'gestor' || cargo === 'sup_tecnico'
       if (isAdminOrGestor) {
         setRedirectingToDashboard(true)
@@ -66,11 +68,11 @@ export const Login: React.FC = () => {
         return () => {
           if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current)
         }
-      } else {
+      } else if (cargo !== null) {
         navigate(redirectPath)
       }
     }
-  }, [user, loading, cargo, navigate, redirectPath])
+  }, [user, loading, cargo, navigate, redirectPath, redirectingToDashboard])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
