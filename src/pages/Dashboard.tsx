@@ -122,6 +122,19 @@ export const Dashboard: React.FC = () => {
 
   const visitedToday = role === 'promotor' && promoterActivity?.visitedToday
 
+  const heroGradient = React.useMemo(() => {
+    if (showUrgentReminder) {
+      return 'linear-gradient(135deg, oklch(34% .16 24) 0%, oklch(20% .08 24) 100%)' // Crimson urgent alert
+    }
+    if (showSoftReminder) {
+      return 'linear-gradient(135deg, oklch(38% .12 55) 0%, oklch(24% .08 55) 100%)' // Amber daily alert
+    }
+    if (visitedToday && !reminderDismissed) {
+      return 'linear-gradient(135deg, oklch(32% .12 150) 0%, oklch(20% .08 160) 100%)' // Success green
+    }
+    return 'var(--gradient-hero)' // Navy standard
+  }, [showUrgentReminder, showSoftReminder, visitedToday, reminderDismissed])
+
   const quickAccessLinks = [
     {
       to: '/novo',
@@ -187,155 +200,8 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* ── PROMOTER: Visited today banner ─────────────────────────────────── */}
-      {visitedToday && !reminderDismissed && (
-        <div className="relative overflow-hidden border-b border-emerald-500/20 no-print"
-          style={{ background: 'linear-gradient(90deg, #064e3b 0%, #065f46 50%, #047857 100%)' }}>
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center shrink-0">
-                <CheckCircle2 size={16} className="text-emerald-300" />
-              </div>
-              <p className="text-sm font-bold text-white">
-                ✅ Ótimo trabalho! Você já registrou uma visita hoje.
-              </p>
-            </div>
-            <button
-              onClick={dismissReminder}
-              className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"
-              aria-label="Fechar"
-            >
-              <X size={15} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── PROMOTER: Soft reminder (não visitou hoje, < 3 dias) ──────────── */}
-      {showSoftReminder && (
-        <div
-          className="relative overflow-hidden no-print"
-          style={{
-            background: 'linear-gradient(90deg, #78350f 0%, #92400e 40%, #b45309 100%)'
-          }}
-        >
-          {/* Animated pulse ring */}
-          <div className="pointer-events-none absolute left-4 sm:left-8 top-1/2 -translate-y-1/2">
-            <span className="absolute inline-flex h-10 w-10 rounded-full bg-amber-400/30 animate-ping" />
-          </div>
-
-          {/* Subtle diagonal stripe overlay */}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-10"
-            style={{
-              backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.3) 8px, rgba(255,255,255,0.3) 9px)'
-            }}
-          />
-
-          <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                {/* Icon with pulse */}
-                <div className="relative shrink-0">
-                  <div className="h-11 w-11 rounded-full bg-amber-400/25 border-2 border-amber-300/50 flex items-center justify-center">
-                    <Bell size={20} className="text-amber-200" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm sm:text-base font-black text-white tracking-tight">
-                    ⚠️ Você ainda não registrou uma visita hoje!
-                  </p>
-                  <p className="text-[11px] sm:text-xs text-amber-200/80 mt-0.5">
-                    {promoterActivity?.lastVisitDate
-                      ? `Último registro: ${new Date(promoterActivity.lastVisitDate).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })}`
-                      : 'Nenhum registro encontrado ainda. Comece agora!'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 ml-auto sm:ml-0">
-                <Link
-                  to="/visitas/novo"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-amber-800 text-xs sm:text-sm font-black hover:scale-[1.03] active:scale-[0.98] transition-transform shadow-lg"
-                >
-                  <Calendar size={15} />
-                  Registrar agora
-                </Link>
-                <button
-                  onClick={dismissReminder}
-                  className="p-2 rounded-lg hover:bg-white/15 text-white/60 hover:text-white transition-colors cursor-pointer"
-                  aria-label="Fechar lembrete"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── PROMOTER: Urgent reminder (3+ dias sem visita) ────────────────── */}
-      {showUrgentReminder && (
-        <div
-          className="relative overflow-hidden no-print"
-          style={{
-            background: 'linear-gradient(90deg, #7f1d1d 0%, #991b1b 40%, #b91c1c 100%)'
-          }}
-        >
-          {/* Animated pulse ring */}
-          <div className="pointer-events-none absolute left-4 sm:left-8 top-1/2 -translate-y-1/2">
-            <span className="absolute inline-flex h-10 w-10 rounded-full bg-red-400/40 animate-ping" />
-          </div>
-
-          {/* Diagonal stripes */}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-10"
-            style={{
-              backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.3) 8px, rgba(255,255,255,0.3) 9px)'
-            }}
-          />
-
-          <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="relative shrink-0">
-                  <div className="h-11 w-11 rounded-full bg-red-400/25 border-2 border-red-300/50 flex items-center justify-center">
-                    <AlertTriangle size={20} className="text-red-200" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm sm:text-base font-black text-white tracking-tight">
-                    🚨 Atenção! Você não registra visitas há {promoterActivity!.daysSinceLastVisit} dias!
-                  </p>
-                  <p className="text-[11px] sm:text-xs text-red-200/80 mt-0.5">
-                    Mantenha seus registros em dia para garantir o acompanhamento correto.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 ml-auto sm:ml-0">
-                <Link
-                  to="/visitas/novo"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-red-700 text-xs sm:text-sm font-black hover:scale-[1.03] active:scale-[0.98] transition-transform shadow-lg"
-                >
-                  <Calendar size={15} />
-                  Registrar agora
-                </Link>
-                <button
-                  onClick={dismissReminder}
-                  className="p-2 rounded-lg hover:bg-white/15 text-white/60 hover:text-white transition-colors cursor-pointer"
-                  aria-label="Fechar lembrete"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* HERO SECTION */}
-      <section className="relative overflow-hidden">
-        {/* Background Gradients */}
-        <div className="absolute inset-0" style={{ backgroundImage: 'var(--gradient-hero)' }} />
+      <section className="relative overflow-hidden transition-all duration-700 ease-in-out" style={{ background: heroGradient }}>
         {/* Grid overlay pattern */}
         <div 
           className="absolute inset-0 opacity-[0.07]" 
@@ -347,39 +213,181 @@ export const Dashboard: React.FC = () => {
         
         {/* Content */}
         <div className="relative mx-auto max-w-7xl px-6 pt-14 pb-20 lg:pt-16 lg:pb-28">
-          <div className="flex flex-col items-start animate-fade-in-up">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              Sistema de Controle <br />
-              <span className="text-brand-gold">de Avarias &amp; Visitas</span>
-            </h1>
+          <div className="grid lg:grid-cols-12 gap-12 items-center">
             
-            <p className="mt-5 max-w-xl text-base sm:text-lg text-white/80 leading-relaxed">
-              Registre rapidamente os materiais avariados e visitas realizadas, acompanhe quantidades em tempo real e gere relatórios profissionais em PDF.
-            </p>
-            
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link 
-                to="/novo" 
-                style={{ backgroundImage: 'var(--gradient-accent)' }}
-                className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-brand-red-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02] transition-transform"
-              >
-                Registrar avaria <ArrowRight size={18} />
-              </Link>
-              <Link 
-                to="/visitas/novo" 
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
-              >
-                Nova visita
-              </Link>
-              {role !== 'promotor' && (
+            {/* Left Content Column */}
+            <div className="lg:col-span-7 flex flex-col items-start animate-fade-in-up">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
+                Sistema de Controle <br />
+                <span className="text-brand-gold">de Avarias &amp; Visitas</span>
+              </h1>
+              
+              <p className="mt-5 max-w-xl text-base sm:text-lg text-white/80 leading-relaxed">
+                Registre rapidamente os materiais avariados e visitas realizadas, acompanhe quantidades em tempo real e gere relatórios profissionais em PDF.
+              </p>
+              
+              <div className="mt-8 flex flex-wrap gap-3">
                 <Link 
-                  to="/relatorios" 
+                  to="/novo" 
+                  style={{ backgroundImage: 'var(--gradient-accent)' }}
+                  className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-brand-red-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02] transition-transform"
+                >
+                  Registrar avaria <ArrowRight size={18} />
+                </Link>
+                <Link 
+                  to="/visitas/novo" 
                   className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
                 >
-                  Ver histórico
+                  Nova visita
                 </Link>
+                {role !== 'promotor' && (
+                  <Link 
+                    to="/relatorios" 
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
+                  >
+                    Ver histórico
+                  </Link>
+                )}
+              </div>
+            </div>
+            
+            {/* Right Alert/Info Card Column */}
+            <div className="lg:col-span-5 w-full animate-fade-in-up">
+              {showUrgentReminder && (
+                <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
+                  {/* Subtle diagonal stripe overlay */}
+                  <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, white 8px, white 9px)' }} />
+                  <div className="absolute top-0 right-0 p-4">
+                    <button onClick={dismissReminder} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Fechar lembrete">
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="relative shrink-0">
+                      <span className="absolute inline-flex h-10 w-10 rounded-full bg-red-400/40 animate-ping" />
+                      <div className="h-11 w-11 rounded-full bg-red-500/25 border border-red-300/40 flex items-center justify-center relative">
+                        <AlertTriangle size={20} className="text-red-200" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 text-red-200 text-[10px] font-black px-2 py-0.5 border border-red-500/30 uppercase tracking-wider">
+                        Atenção Crítica
+                      </span>
+                      <h3 className="text-xl font-bold leading-tight mt-1">Registro Muito Atrasado</h3>
+                      <p className="text-sm text-white/80 leading-normal">
+                        Você está há <strong className="text-white font-extrabold">{promoterActivity!.daysSinceLastVisit} dias</strong> sem registrar nenhuma visita. O registro diário é obrigatório.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <Link
+                      to="/visitas/novo"
+                      className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl bg-white text-red-800 text-sm font-bold hover:bg-white/95 active:scale-[0.98] transition-transform shadow-md"
+                    >
+                      <Calendar size={16} />
+                      Registrar Visita Agora
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {showSoftReminder && (
+                <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
+                  {/* Subtle diagonal stripe overlay */}
+                  <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, white 8px, white 9px)' }} />
+                  <div className="absolute top-0 right-0 p-4">
+                    <button onClick={dismissReminder} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Fechar lembrete">
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="relative shrink-0">
+                      <span className="absolute inline-flex h-10 w-10 rounded-full bg-amber-400/40 animate-ping" />
+                      <div className="h-11 w-11 rounded-full bg-amber-500/25 border border-amber-300/40 flex items-center justify-center relative">
+                        <Bell size={20} className="text-amber-200" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 text-amber-200 text-[10px] font-black px-2 py-0.5 border border-amber-500/30 uppercase tracking-wider">
+                        Lembrete Diário
+                      </span>
+                      <h3 className="text-xl font-bold leading-tight mt-1">Registrar Visita de Hoje</h3>
+                      <p className="text-sm text-white/80 leading-normal">
+                        Sua visita de hoje ainda não foi registrada. Atualize o sistema para manter seu relatório em dia.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <Link
+                      to="/visitas/novo"
+                      className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl bg-white text-amber-800 text-sm font-bold hover:bg-white/95 active:scale-[0.98] transition-transform shadow-md"
+                    >
+                      <Calendar size={16} />
+                      Registrar Visita
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {visitedToday && !reminderDismissed && (
+                <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
+                  <div className="absolute top-0 right-0 p-4">
+                    <button onClick={dismissReminder} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Fechar">
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="shrink-0">
+                      <div className="h-11 w-11 rounded-full bg-emerald-500/25 border border-emerald-300/40 flex items-center justify-center">
+                        <CheckCircle2 size={20} className="text-emerald-200" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 text-emerald-200 text-[10px] font-black px-2 py-0.5 border border-emerald-500/30 uppercase tracking-wider">
+                        Atualizado
+                      </span>
+                      <h3 className="text-xl font-bold leading-tight mt-1">Tudo Pronto por Hoje!</h3>
+                      <p className="text-sm text-white/80 leading-normal">
+                        Sua visita de hoje já foi registrada no sistema. Obrigado por manter seus relatórios atualizados!
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <div className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl bg-white/10 border border-white/10 text-white text-sm font-bold">
+                      <CheckCircle2 size={16} className="text-emerald-300" />
+                      Relatório de hoje enviado
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Default welcome info card for when no active alert or non-promoter */}
+              {(!showUrgentReminder && !showSoftReminder && (!visitedToday || reminderDismissed)) && (
+                <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
+                  <div className="space-y-2">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white/15 text-white/90 text-[10px] font-bold px-2.5 py-0.5 uppercase tracking-wider">
+                      Painel Geral
+                    </span>
+                    <h3 className="text-xl font-bold leading-tight">Do Mestre SaaS</h3>
+                    <p className="text-sm text-white/75 leading-relaxed">
+                      Acompanhe em tempo real as atividades, visitas às filiais e relatórios de avarias gerados pela equipe de promotores.
+                    </p>
+                  </div>
+                  
+                  <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <div className="text-2xl font-bold font-display text-brand-gold">{stats?.totalVisitas || 0}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-white/60 font-semibold mt-0.5">Visitas</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold font-display text-brand-gold">{stats?.totalAvarias || 0}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-white/60 font-semibold mt-0.5">Avarias</div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
+
           </div>
         </div>
       </section>
