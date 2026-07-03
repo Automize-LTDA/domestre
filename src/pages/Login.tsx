@@ -74,7 +74,7 @@ export const Login: React.FC = () => {
       if (isAdminOrGestor) {
         hasStartedRedirect.current = true
         setRedirectingToDashboard(true)
-        const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:5174'
+        const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'https://dashboard-mestre.vercel.app/login'
         redirectTimerRef.current = setTimeout(() => {
           const mockSession = localStorage.getItem('domestre.mock_session')
           let finalUrl = dashboardUrl
@@ -123,7 +123,7 @@ export const Login: React.FC = () => {
         setSuccessMessage(null)
         hasStartedRedirect.current = true
         setRedirectingToDashboard(true)
-        const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:5174'
+        const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'https://dashboard-mestre.vercel.app/login'
         redirectTimerRef.current = setTimeout(async () => {
           const mockSession = localStorage.getItem('domestre.mock_session')
           let finalUrl = dashboardUrl

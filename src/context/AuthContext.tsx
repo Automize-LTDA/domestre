@@ -55,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (status === 'ativo') {
           if (userCargo === 'admin' || userCargo === 'gestor' || userCargo === 'sup_tecnico') {
             if (window.location.pathname !== '/login') {
-              const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:5174'
+              const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'https://dashboard-mestre.vercel.app/login'
               const mockSession = localStorage.getItem('domestre.mock_session')
               
               // Obter sessão atual para realizar o SSO
