@@ -254,3 +254,8 @@ input[type="number"] {
     background: white !important;
   }
 }
+
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}

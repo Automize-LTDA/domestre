@@ -166,7 +166,7 @@ export const Login: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white font-sans text-slate-800 relative" style={{ overflowX: 'hidden', maxWidth: '100vw' }}>
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white font-sans text-slate-800 relative" style={{ overflowX: 'hidden', maxWidth: '100%' }}>
       
       {/* CSS Animations */}
       <style>{`
