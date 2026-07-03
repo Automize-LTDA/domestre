@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -11,7 +11,11 @@ import {
   Sparkles,
   DollarSign,
   Package,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle2,
+  Circle,
+  PartyPopper,
+  ClipboardList
 } from 'lucide-react'
 
 export interface VisitFormState {
@@ -37,6 +41,118 @@ export interface VisitFormState {
 
 const DRAFT_VISITA_KEY = 'domestre.draft_visita.v2'
 
+// ── Section Status Badge ──────────────────────────────────────────────────────
+function SectionBadge({ filled }: { filled: boolean }) {
+  if (filled) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold px-2 py-0.5 border border-emerald-500/30 shrink-0">
+        <CheckCircle2 size={11} strokeWidth={2.5} /> Preenchido
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold px-2 py-0.5 border border-amber-500/30 shrink-0">
+      <Circle size={11} strokeWidth={2.5} /> Pendente
+    </span>
+  )
+}
+
+// ── Success Overlay ──────────────────────────────────────────────────────────
+function SuccessOverlay({ form, onNew }: { form: VisitFormState; onNew: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md animate-fade-in-up p-4">
+      {/* Confetti dots - decorative */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        {[...Array(18)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full animate-bounce"
+            style={{
+              width: `${6 + (i % 4) * 3}px`,
+              height: `${6 + (i % 4) * 3}px`,
+              top: `${Math.random() * 80 + 5}%`,
+              left: `${Math.random() * 90 + 2}%`,
+              background: ['#10b981','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#f97316'][i % 6],
+              animationDelay: `${i * 0.08}s`,
+              animationDuration: `${0.8 + (i % 3) * 0.3}s`,
+              opacity: 0.75
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="relative max-w-sm w-full bg-card rounded-3xl border border-border shadow-[var(--shadow-elegant)] p-8 text-center flex flex-col items-center gap-5">
+        {/* Icon */}
+        <div className="h-20 w-20 rounded-full bg-emerald-500/15 border-2 border-emerald-500/30 flex items-center justify-center">
+          <PartyPopper size={40} className="text-emerald-500" />
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Relatório Salvo!</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Visita registrada com sucesso.</p>
+        </div>
+
+        {/* Summary Card */}
+        <div className="w-full rounded-2xl bg-secondary/60 border border-border p-4 text-left space-y-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+            <ClipboardList size={12} /> Resumo
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+            <span className="text-muted-foreground">Número:</span>
+            <span className="font-mono font-bold text-brand-red">{form.numero}</span>
+            <span className="text-muted-foreground">Loja:</span>
+            <span className="font-semibold truncate">{form.empresa || '—'}</span>
+            <span className="text-muted-foreground">Local:</span>
+            <span className="font-semibold truncate">{form.local || '—'}</span>
+            <span className="text-muted-foreground">Ponto Extra:</span>
+            <span className="font-semibold">{form.pontoExtra || '—'}</span>
+            <span className="text-muted-foreground">Estoque:</span>
+            <span className="font-semibold">{form.situacaoEstoque || '—'}</span>
+            <span className="text-muted-foreground">Ruptura:</span>
+            <span className="font-semibold">{form.ruptura || '—'}</span>
+          </div>
+        </div>
+
+        <button
+          onClick={onNew}
+          style={{ backgroundImage: 'var(--gradient-accent)' }}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-brand-red-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02] active:scale-[0.99] transition-transform"
+        >
+          <ClipboardList size={16} />
+          Registrar Nova Visita
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Progress Bar ─────────────────────────────────────────────────────────────
+function ProgressBar({ percent }: { percent: number }) {
+  const color =
+    percent >= 100 ? '#10b981' :
+    percent >= 60  ? '#f59e0b' :
+                     '#ef4444'
+
+  return (
+    <div className="sticky top-[64px] md:top-[80px] z-20 bg-background/95 backdrop-blur-sm border-b border-border px-0 py-3 -mx-0 mb-2 no-print">
+      <div className="flex items-center justify-between mb-1.5 px-1">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+          Progresso do formulário
+        </span>
+        <span className="text-xs font-bold tabular-nums" style={{ color }}>
+          {percent}%
+        </span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500 ease-out"
+          style={{ width: `${percent}%`, background: color, boxShadow: percent > 0 ? `0 0 8px ${color}55` : 'none' }}
+        />
+      </div>
+    </div>
+  )
+}
+
 export const RelatorioVisitasForm: React.FC = () => {
   const { user, fullName } = useAuth()
   const { showToast } = useToast()
@@ -61,12 +177,13 @@ export const RelatorioVisitasForm: React.FC = () => {
 
   const [loading, setLoading] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [savedForm, setSavedForm] = useState<VisitFormState | null>(null)
 
   // Fetch next visit report number
   async function fetchNextVisitNumber() {
     try {
       const year = new Date().getFullYear()
-      // Use MAX of existing numbers instead of COUNT to avoid duplicate key conflicts on deleted records
       const { data } = await supabase
         .from('relatorios_visitas')
         .select('numero')
@@ -126,6 +243,29 @@ export const RelatorioVisitasForm: React.FC = () => {
     }
   }, [form, isLoaded])
 
+  // ── Completion logic ─────────────────────────────────────────────────────
+  const sections = useMemo(() => {
+    const lojaOk = form.empresa.trim().length > 0
+    const localOk = form.local.trim().length > 0
+    const pontoExtraOk = form.pontoExtra !== ''
+    const tipoPontoExtraOk = form.tipoPontoExtra.length > 0 &&
+      (!form.tipoPontoExtra.includes('Outro') || form.tipoPontoExtraOutro.trim().length > 0)
+    const materiaisOk = form.materiaisPositivados.length > 0 &&
+      (!form.materiaisPositivados.includes('Outro') || form.materiaisPositivadosOutro.trim().length > 0)
+    const precoOk = form.preco.length > 0
+    const estoqueOk = form.situacaoEstoque !== ''
+    const rupturaOk = form.ruptura !== ''
+
+    return { lojaOk, localOk, pontoExtraOk, tipoPontoExtraOk, materiaisOk, precoOk, estoqueOk, rupturaOk }
+  }, [form])
+
+  const completedCount = useMemo(
+    () => Object.values(sections).filter(Boolean).length,
+    [sections]
+  )
+  const totalSections = Object.keys(sections).length
+  const completionPercent = Math.round((completedCount / totalSections) * 100)
+
   // Get human readable text summary of checklist options
   function getFormattedSummary(f: VisitFormState): string {
     const pontoExtraStr = f.pontoExtra
@@ -150,16 +290,6 @@ export const RelatorioVisitasForm: React.FC = () => {
   }
 
   function validateForm(): boolean {
-    /*
-    if (!form.horarioChegada) {
-      showToast('Por favor, informe o Horário de Chegada.', 'error')
-      return false
-    }
-    if (!form.horarioSaida) {
-      showToast('Por favor, informe o Horário de Saída.', 'error')
-      return false
-    }
-    */
     if (!form.empresa.trim()) {
       showToast('Por favor, informe o nome da loja.', 'error')
       return false
@@ -316,437 +446,449 @@ export const RelatorioVisitasForm: React.FC = () => {
   async function handleSave() {
     if (!validateForm()) return
     try {
+      const snapshot = { ...form }
       await saveVisitToDatabase()
-      resetForm()
-      showToast('Relatório de Visita salvo com sucesso!', 'success')
+      setSavedForm(snapshot)
+      setShowSuccess(true)
     } catch (e) {}
   }
 
-
+  function handleNewVisit() {
+    setShowSuccess(false)
+    setSavedForm(null)
+    resetForm()
+  }
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
-      {/* METADATA TOP BAR */}
-      <div className="rounded-2xl bg-card border border-border p-4 shadow-[var(--shadow-soft)] flex flex-wrap gap-4 items-center justify-between text-sm">
-        <div className="flex gap-4">
-          <div>
-            <span className="text-muted-foreground">Responsável:</span>{' '}
-            <span className="font-semibold">{form.responsavel}</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Número:</span>{' '}
-            <span className="font-mono font-semibold text-brand-red">{form.numero || 'V-XXXX-XXXX'}</span>
-          </div>
-        </div>
-        <div>
-          <span className="text-muted-foreground">Status:</span>{' '}
-          <select
-            value={form.status}
-            onChange={e => setForm({ ...form, status: e.target.value as any })}
-            className="bg-transparent font-semibold border-b border-border focus:outline-none focus:border-brand-red py-0.5"
-          >
-            <option value="Realizada">Realizada</option>
-            <option value="Agendada">Agendada</option>
-            <option value="Cancelada">Cancelada</option>
-          </select>
-        </div>
-      </div>
+    <>
+      {/* Success overlay */}
+      {showSuccess && savedForm && (
+        <SuccessOverlay form={savedForm} onNew={handleNewVisit} />
+      )}
 
-      {/* 1. HORÁRIO DE CHEGADA 
-      <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
-        <div className="flex items-center justify-between mb-4">
-          <label className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
-            Horário de Chegada <span className="text-brand-red font-bold">*</span>
-          </label>
-          <Clock size={16} className="text-muted-foreground opacity-60" />
-        </div>
-        <div className="space-y-2">
-          <span className="text-xs font-semibold text-muted-foreground/85 block">Horário</span>
-          <input
-            type="time"
-            value={form.horarioChegada}
-            onChange={e => setForm({ ...form, horarioChegada: e.target.value })}
-            className="input max-w-[200px]"
-          />
-        </div>
-      </section>
-      */}
+      <div className="space-y-6 max-w-3xl mx-auto">
+        {/* PROGRESS BAR */}
+        <ProgressBar percent={completionPercent} />
 
-      {/* 2. HORÁRIO DE SAÍDA
-      <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
-        <div className="flex items-center justify-between mb-4">
-          <label className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
-            Horário de Saída <span className="text-brand-red font-bold">*</span>
-          </label>
-          <Clock size={16} className="text-muted-foreground opacity-60" />
-        </div>
-        <div className="space-y-2">
-          <span className="text-xs font-semibold text-muted-foreground/85 block">Horário</span>
-          <input
-            type="time"
-            value={form.horarioSaida}
-            onChange={e => setForm({ ...form, horarioSaida: e.target.value })}
-            className="input max-w-[200px]"
-          />
-        </div>
-      </section>
-      */}
-
-      {/* 3. QUAL LOJA? */}
-      <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
-            Qual loja? <span className="text-brand-red font-bold">*</span>
-          </label>
-          <Building2 size={16} className="text-muted-foreground opacity-60" />
-        </div>
-        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground italic mb-4 block">
-          DIGITE APENAS O NOME DA LOJA
-        </span>
-        <input
-          value={form.empresa}
-          onChange={e => setForm({ ...form, empresa: e.target.value })}
-          placeholder="Sua resposta"
-          className="input w-full border-0 border-b border-border rounded-none px-0 focus:border-brand-red focus:box-shadow-none focus:ring-0 focus:outline-none"
-        />
-      </section>
-
-      {/* 4. LOCAL */}
-      <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
-            Local <span className="text-brand-red font-bold">*</span>
-          </label>
-          <MapPin size={16} className="text-muted-foreground opacity-60" />
-        </div>
-        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground italic mb-4 block">
-          DIGITE NOME DA CIDADE E BAIRRO
-        </span>
-        <input
-          value={form.local}
-          onChange={e => setForm({ ...form, local: e.target.value })}
-          placeholder="Sua resposta"
-          className="input w-full border-0 border-b border-border rounded-none px-0 focus:border-brand-red focus:box-shadow-none focus:ring-0 focus:outline-none"
-        />
-      </section>
-
-      {/* 5. PONTO EXTRA */}
-      <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
-            Ponto Extra <span className="text-brand-red font-bold">*</span>
-          </span>
-          <Sparkles size={16} className="text-muted-foreground opacity-60" />
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:max-w-md">
-          {['Sim', 'Não'].map(val => (
-            <div 
-              key={val}
-              onClick={() => handlePontoExtraChange(val as any)}
-              className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
-                form.pontoExtra === val 
-                  ? 'border-brand-red bg-brand-red/5 font-bold text-brand-red shadow-[0_0_12px_rgba(212,12,26,0.06)]' 
-                  : 'border-border bg-card hover:bg-secondary/40 text-foreground'
-              }`}
-            >
-              <span className="text-sm font-semibold">{val}</span>
-              {/* Custom Radio Circle */}
-              <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                form.pontoExtra === val
-                  ? 'border-brand-red bg-brand-red'
-                  : 'border-muted-foreground/45 bg-transparent'
-              }`}>
-                {form.pontoExtra === val && <div className="h-2 w-2 rounded-full bg-white" />}
-              </div>
+        {/* METADATA TOP BAR */}
+        <div className="rounded-2xl bg-card border border-border p-4 shadow-[var(--shadow-soft)] flex flex-wrap gap-4 items-center justify-between text-sm">
+          <div className="flex gap-4">
+            <div>
+              <span className="text-muted-foreground">Responsável:</span>{' '}
+              <span className="font-semibold">{form.responsavel}</span>
             </div>
-          ))}
+            <div>
+              <span className="text-muted-foreground">Número:</span>{' '}
+              <span className="font-mono font-semibold text-brand-red">{form.numero || 'V-XXXX-XXXX'}</span>
+            </div>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Status:</span>{' '}
+            <select
+              value={form.status}
+              onChange={e => setForm({ ...form, status: e.target.value as any })}
+              className="bg-transparent font-semibold border-b border-border focus:outline-none focus:border-brand-red py-0.5"
+            >
+              <option value="Realizada">Realizada</option>
+              <option value="Agendada">Agendada</option>
+              <option value="Cancelada">Cancelada</option>
+            </select>
+          </div>
         </div>
-      </section>
 
-      {/* 6. TIPO DE PONTO EXTRA */}
-      <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
-            Tipo de Ponto Extra <span className="text-brand-red font-bold">*</span>
+        {/* 3. QUAL LOJA? */}
+        <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
+              Qual loja? <span className="text-brand-red font-bold">*</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <SectionBadge filled={sections.lojaOk} />
+              <Building2 size={16} className="text-muted-foreground opacity-60" />
+            </div>
+          </div>
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground italic mb-4 block">
+            DIGITE APENAS O NOME DA LOJA
           </span>
-          <Sparkles size={16} className="text-muted-foreground opacity-60" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {['Ponta de Gondola', 'Ilha', 'Sem Ponto Extra'].map(opt => {
-            const isChecked = form.tipoPontoExtra.includes(opt)
-            return (
+          <input
+            value={form.empresa}
+            onChange={e => setForm({ ...form, empresa: e.target.value })}
+            placeholder="Sua resposta"
+            className="input w-full border-0 border-b border-border rounded-none px-0 focus:border-brand-red focus:box-shadow-none focus:ring-0 focus:outline-none"
+          />
+        </section>
+
+        {/* 4. LOCAL */}
+        <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
+              Local <span className="text-brand-red font-bold">*</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <SectionBadge filled={sections.localOk} />
+              <MapPin size={16} className="text-muted-foreground opacity-60" />
+            </div>
+          </div>
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground italic mb-4 block">
+            DIGITE NOME DA CIDADE E BAIRRO
+          </span>
+          <input
+            value={form.local}
+            onChange={e => setForm({ ...form, local: e.target.value })}
+            placeholder="Sua resposta"
+            className="input w-full border-0 border-b border-border rounded-none px-0 focus:border-brand-red focus:box-shadow-none focus:ring-0 focus:outline-none"
+          />
+        </section>
+
+        {/* 5. PONTO EXTRA */}
+        <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
+              Ponto Extra <span className="text-brand-red font-bold">*</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <SectionBadge filled={sections.pontoExtraOk} />
+              <Sparkles size={16} className="text-muted-foreground opacity-60" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:max-w-md">
+            {['Sim', 'Não'].map(val => (
               <div 
-                key={opt}
-                onClick={() => handleCheckboxChange('tipoPontoExtra', opt)}
+                key={val}
+                onClick={() => handlePontoExtraChange(val as any)}
                 className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
-                  isChecked
-                    ? 'border-brand-red bg-brand-red/5 font-bold text-brand-red shadow-[0_0_12px_rgba(212,12,26,0.06)]'
+                  form.pontoExtra === val 
+                    ? 'border-brand-red bg-brand-red/5 font-bold text-brand-red shadow-[0_0_12px_rgba(212,12,26,0.06)]' 
                     : 'border-border bg-card hover:bg-secondary/40 text-foreground'
                 }`}
               >
-                <span className="text-sm font-semibold">{opt}</span>
-                {/* Custom Checkbox Square */}
-                <div className={`h-4.5 w-4.5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
-                  isChecked
+                <span className="text-sm font-semibold">{val}</span>
+                {/* Custom Radio Circle */}
+                <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center shrink-0 transition-all ${
+                  form.pontoExtra === val
                     ? 'border-brand-red bg-brand-red'
                     : 'border-muted-foreground/45 bg-transparent'
                 }`}>
-                  {isChecked && (
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="h-3 w-3 text-white">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
+                  {form.pontoExtra === val && <div className="h-2 w-2 rounded-full bg-white" />}
                 </div>
               </div>
-            )
-          })}
+            ))}
+          </div>
+        </section>
 
-          {/* Outro Option */}
-          <div 
-            onClick={() => {
-              if (!form.tipoPontoExtra.includes('Outro')) {
-                handleCheckboxChange('tipoPontoExtra', 'Outro')
-              }
-            }}
-            className={`flex flex-col gap-2 p-4 rounded-xl border cursor-pointer transition-all ${
-              form.tipoPontoExtra.includes('Outro')
-                ? 'border-brand-red bg-brand-red/5 font-bold shadow-[0_0_12px_rgba(212,12,26,0.06)]'
-                : 'border-border bg-card hover:bg-secondary/40'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`text-sm font-semibold ${form.tipoPontoExtra.includes('Outro') ? 'text-brand-red' : 'text-foreground'}`}>Outro:</span>
-              <div className={`h-4.5 w-4.5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
+        {/* 6. TIPO DE PONTO EXTRA */}
+        <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
+              Tipo de Ponto Extra <span className="text-brand-red font-bold">*</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <SectionBadge filled={sections.tipoPontoExtraOk} />
+              <Sparkles size={16} className="text-muted-foreground opacity-60" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {['Ponta de Gondola', 'Ilha', 'Sem Ponto Extra'].map(opt => {
+              const isChecked = form.tipoPontoExtra.includes(opt)
+              return (
+                <div 
+                  key={opt}
+                  onClick={() => handleCheckboxChange('tipoPontoExtra', opt)}
+                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
+                    isChecked
+                      ? 'border-brand-red bg-brand-red/5 font-bold text-brand-red shadow-[0_0_12px_rgba(212,12,26,0.06)]'
+                      : 'border-border bg-card hover:bg-secondary/40 text-foreground'
+                  }`}
+                >
+                  <span className="text-sm font-semibold">{opt}</span>
+                  {/* Custom Checkbox Square */}
+                  <div className={`h-4.5 w-4.5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
+                    isChecked
+                      ? 'border-brand-red bg-brand-red'
+                      : 'border-muted-foreground/45 bg-transparent'
+                  }`}>
+                    {isChecked && (
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="h-3 w-3 text-white">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* Outro Option */}
+            <div 
+              onClick={() => {
+                if (!form.tipoPontoExtra.includes('Outro')) {
+                  handleCheckboxChange('tipoPontoExtra', 'Outro')
+                }
+              }}
+              className={`flex flex-col gap-2 p-4 rounded-xl border cursor-pointer transition-all ${
                 form.tipoPontoExtra.includes('Outro')
-                  ? 'border-brand-red bg-brand-red'
-                  : 'border-muted-foreground/45 bg-transparent'
-              }`}>
-                {form.tipoPontoExtra.includes('Outro') && (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="h-3 w-3 text-white">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </div>
-            </div>
-            {form.tipoPontoExtra.includes('Outro') && (
-              <input
-                value={form.tipoPontoExtraOutro}
-                onChange={e => setForm({ ...form, tipoPontoExtraOutro: e.target.value })}
-                onClick={e => e.stopPropagation()}
-                placeholder="Especifique..."
-                className="input text-sm w-full mt-1 border-0 border-b border-brand-red/50 focus:border-brand-red px-0 rounded-none bg-transparent"
-              />
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* 7. MATERIAIS POSITIVADOS (MERCHAN) */}
-      <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
-            Materiais Positivados (Merchan) <span className="text-brand-red font-bold">*</span>
-          </span>
-          <Sparkles size={16} className="text-muted-foreground opacity-60" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[
-            'Expositor de Tintas',
-            'Expositor de Ferro',
-            'Expositor Rejunte',
-            'Testeira',
-            'Linguenta',
-            'Orelha',
-            'Catálogo',
-            'Bandeirola'
-          ].map(opt => {
-            const isChecked = form.materiaisPositivados.includes(opt)
-            return (
-              <div 
-                key={opt}
-                onClick={() => handleCheckboxChange('materiaisPositivados', opt)}
-                className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
-                  isChecked
-                    ? 'border-brand-red bg-brand-red/5 font-bold text-brand-red shadow-[0_0_12px_rgba(212,12,26,0.06)]'
-                    : 'border-border bg-card hover:bg-secondary/40 text-foreground'
-                }`}
-              >
-                <span className="text-sm font-semibold">{opt}</span>
+                  ? 'border-brand-red bg-brand-red/5 font-bold shadow-[0_0_12px_rgba(212,12,26,0.06)]'
+                  : 'border-border bg-card hover:bg-secondary/40'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-semibold ${form.tipoPontoExtra.includes('Outro') ? 'text-brand-red' : 'text-foreground'}`}>Outro:</span>
                 <div className={`h-4.5 w-4.5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
-                  isChecked
+                  form.tipoPontoExtra.includes('Outro')
                     ? 'border-brand-red bg-brand-red'
                     : 'border-muted-foreground/45 bg-transparent'
                 }`}>
-                  {isChecked && (
+                  {form.tipoPontoExtra.includes('Outro') && (
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="h-3 w-3 text-white">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   )}
                 </div>
               </div>
-            )
-          })}
+              {form.tipoPontoExtra.includes('Outro') && (
+                <input
+                  value={form.tipoPontoExtraOutro}
+                  onChange={e => setForm({ ...form, tipoPontoExtraOutro: e.target.value })}
+                  onClick={e => e.stopPropagation()}
+                  placeholder="Especifique..."
+                  className="input text-sm w-full mt-1 border-0 border-b border-brand-red/50 focus:border-brand-red px-0 rounded-none bg-transparent"
+                />
+              )}
+            </div>
+          </div>
+        </section>
 
-          {/* Outro Option */}
-          <div 
-            onClick={() => {
-              if (!form.materiaisPositivados.includes('Outro')) {
-                handleCheckboxChange('materiaisPositivados', 'Outro')
-              }
-            }}
-            className={`flex flex-col gap-2 p-4 rounded-xl border cursor-pointer transition-all ${
-              form.materiaisPositivados.includes('Outro')
-                ? 'border-brand-red bg-brand-red/5 font-bold shadow-[0_0_12px_rgba(212,12,26,0.06)]'
-                : 'border-border bg-card hover:bg-secondary/40'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`text-sm font-semibold ${form.materiaisPositivados.includes('Outro') ? 'text-brand-red' : 'text-foreground'}`}>Outro:</span>
-              <div className={`h-4.5 w-4.5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
+        {/* 7. MATERIAIS POSITIVADOS (MERCHAN) */}
+        <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
+              Materiais Positivados (Merchan) <span className="text-brand-red font-bold">*</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <SectionBadge filled={sections.materiaisOk} />
+              <Sparkles size={16} className="text-muted-foreground opacity-60" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[
+              'Expositor de Tintas',
+              'Expositor de Ferro',
+              'Expositor Rejunte',
+              'Testeira',
+              'Linguenta',
+              'Orelha',
+              'Catálogo',
+              'Bandeirola'
+            ].map(opt => {
+              const isChecked = form.materiaisPositivados.includes(opt)
+              return (
+                <div 
+                  key={opt}
+                  onClick={() => handleCheckboxChange('materiaisPositivados', opt)}
+                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
+                    isChecked
+                      ? 'border-brand-red bg-brand-red/5 font-bold text-brand-red shadow-[0_0_12px_rgba(212,12,26,0.06)]'
+                      : 'border-border bg-card hover:bg-secondary/40 text-foreground'
+                  }`}
+                >
+                  <span className="text-sm font-semibold">{opt}</span>
+                  <div className={`h-4.5 w-4.5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
+                    isChecked
+                      ? 'border-brand-red bg-brand-red'
+                      : 'border-muted-foreground/45 bg-transparent'
+                  }`}>
+                    {isChecked && (
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="h-3 w-3 text-white">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* Outro Option */}
+            <div 
+              onClick={() => {
+                if (!form.materiaisPositivados.includes('Outro')) {
+                  handleCheckboxChange('materiaisPositivados', 'Outro')
+                }
+              }}
+              className={`flex flex-col gap-2 p-4 rounded-xl border cursor-pointer transition-all ${
                 form.materiaisPositivados.includes('Outro')
-                  ? 'border-brand-red bg-brand-red'
-                  : 'border-muted-foreground/45 bg-transparent'
-              }`}>
-                {form.materiaisPositivados.includes('Outro') && (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="h-3 w-3 text-white">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </div>
-            </div>
-            {form.materiaisPositivados.includes('Outro') && (
-              <input
-                value={form.materiaisPositivadosOutro}
-                onChange={e => setForm({ ...form, materiaisPositivadosOutro: e.target.value })}
-                onClick={e => e.stopPropagation()}
-                placeholder="Especifique..."
-                className="input text-sm w-full mt-1 border-0 border-b border-brand-red/50 focus:border-brand-red px-0 rounded-none bg-transparent"
-              />
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* 8. PREÇO */}
-      <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
-            Preço <span className="text-brand-red font-bold">*</span>
-          </span>
-          <DollarSign size={16} className="text-muted-foreground opacity-60" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {['Produtos Precificados', 'Preços Atualizados'].map(opt => {
-            const isChecked = form.preco.includes(opt)
-            return (
-              <div 
-                key={opt}
-                onClick={() => handleCheckboxChange('preco', opt)}
-                className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
-                  isChecked
-                    ? 'border-brand-red bg-brand-red/5 font-bold text-brand-red shadow-[0_0_12px_rgba(212,12,26,0.06)]'
-                    : 'border-border bg-card hover:bg-secondary/40 text-foreground'
-                }`}
-              >
-                <span className="text-sm font-semibold">{opt}</span>
+                  ? 'border-brand-red bg-brand-red/5 font-bold shadow-[0_0_12px_rgba(212,12,26,0.06)]'
+                  : 'border-border bg-card hover:bg-secondary/40'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-semibold ${form.materiaisPositivados.includes('Outro') ? 'text-brand-red' : 'text-foreground'}`}>Outro:</span>
                 <div className={`h-4.5 w-4.5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
-                  isChecked
+                  form.materiaisPositivados.includes('Outro')
                     ? 'border-brand-red bg-brand-red'
                     : 'border-muted-foreground/45 bg-transparent'
                 }`}>
-                  {isChecked && (
+                  {form.materiaisPositivados.includes('Outro') && (
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="h-3 w-3 text-white">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   )}
                 </div>
               </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* 9. QUAL A SITUAÇÃO DO ESTOQUE */}
-      <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
-            Qual a situação do Estoque <span className="text-brand-red font-bold">*</span>
-          </span>
-          <Package size={16} className="text-muted-foreground opacity-60" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {['Adequado', 'Moderado', 'Baixa'].map(val => (
-            <div 
-              key={val}
-              onClick={() => setForm({ ...form, situacaoEstoque: val as any })}
-              className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
-                form.situacaoEstoque === val 
-                  ? 'border-brand-red bg-brand-red/5 font-bold text-brand-red shadow-[0_0_12px_rgba(212,12,26,0.06)]' 
-                  : 'border-border bg-card hover:bg-secondary/40 text-foreground'
-              }`}
-            >
-              <span className="text-sm font-semibold">{val}</span>
-              <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                form.situacaoEstoque === val
-                  ? 'border-brand-red bg-brand-red'
-                  : 'border-muted-foreground/45 bg-transparent'
-              }`}>
-                {form.situacaoEstoque === val && <div className="h-2 w-2 rounded-full bg-white" />}
-              </div>
+              {form.materiaisPositivados.includes('Outro') && (
+                <input
+                  value={form.materiaisPositivadosOutro}
+                  onChange={e => setForm({ ...form, materiaisPositivadosOutro: e.target.value })}
+                  onClick={e => e.stopPropagation()}
+                  placeholder="Especifique..."
+                  className="input text-sm w-full mt-1 border-0 border-b border-brand-red/50 focus:border-brand-red px-0 rounded-none bg-transparent"
+                />
+              )}
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+        </section>
 
-      {/* 10. RUPTURA */}
-      <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
-            Ruptura <span className="text-brand-red font-bold">*</span>
-          </span>
-          <AlertTriangle size={16} className="text-muted-foreground opacity-60" />
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:max-w-md">
-          {['Sim', 'Não'].map(val => (
-            <div 
-              key={val}
-              onClick={() => setForm({ ...form, ruptura: val as any })}
-              className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
-                form.ruptura === val 
-                  ? 'border-brand-red bg-brand-red/5 font-bold text-brand-red shadow-[0_0_12px_rgba(212,12,26,0.06)]' 
-                  : 'border-border bg-card hover:bg-secondary/40 text-foreground'
-              }`}
-            >
-              <span className="text-sm font-semibold">{val}</span>
-              <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                form.ruptura === val
-                  ? 'border-brand-red bg-brand-red'
-                  : 'border-muted-foreground/45 bg-transparent'
-              }`}>
-                {form.ruptura === val && <div className="h-2 w-2 rounded-full bg-white" />}
-              </div>
+        {/* 8. PREÇO */}
+        <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
+              Preço <span className="text-brand-red font-bold">*</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <SectionBadge filled={sections.precoOk} />
+              <DollarSign size={16} className="text-muted-foreground opacity-60" />
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {['Produtos Precificados', 'Preços Atualizados'].map(opt => {
+              const isChecked = form.preco.includes(opt)
+              return (
+                <div 
+                  key={opt}
+                  onClick={() => handleCheckboxChange('preco', opt)}
+                  className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
+                    isChecked
+                      ? 'border-brand-red bg-brand-red/5 font-bold text-brand-red shadow-[0_0_12px_rgba(212,12,26,0.06)]'
+                      : 'border-border bg-card hover:bg-secondary/40 text-foreground'
+                  }`}
+                >
+                  <span className="text-sm font-semibold">{opt}</span>
+                  <div className={`h-4.5 w-4.5 rounded-md border flex items-center justify-center shrink-0 transition-all ${
+                    isChecked
+                      ? 'border-brand-red bg-brand-red'
+                      : 'border-muted-foreground/45 bg-transparent'
+                  }`}>
+                    {isChecked && (
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className="h-3 w-3 text-white">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
 
-      {/* BOTTOM ACTIONS BAR */}
-      <div className="flex flex-wrap gap-3 sticky bottom-4 z-10 no-print pt-4 bg-background/80 backdrop-blur-md border-t border-border">
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          style={{ backgroundImage: 'var(--gradient-accent)' }}
-          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-brand-red-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02] active:scale-[0.99] transition-transform disabled:opacity-60 disabled:hover:scale-100"
-        >
-          {loading ? (
-            <LoaderCircle className="animate-spin" size={18} />
-          ) : (
-            <Save size={18} />
+        {/* 9. QUAL A SITUAÇÃO DO ESTOQUE */}
+        <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
+              Qual a situação do Estoque <span className="text-brand-red font-bold">*</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <SectionBadge filled={sections.estoqueOk} />
+              <Package size={16} className="text-muted-foreground opacity-60" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {['Adequado', 'Moderado', 'Baixa'].map(val => (
+              <div 
+                key={val}
+                onClick={() => setForm({ ...form, situacaoEstoque: val as any })}
+                className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
+                  form.situacaoEstoque === val 
+                    ? 'border-brand-red bg-brand-red/5 font-bold text-brand-red shadow-[0_0_12px_rgba(212,12,26,0.06)]' 
+                    : 'border-border bg-card hover:bg-secondary/40 text-foreground'
+                }`}
+              >
+                <span className="text-sm font-semibold">{val}</span>
+                <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center shrink-0 transition-all ${
+                  form.situacaoEstoque === val
+                    ? 'border-brand-red bg-brand-red'
+                    : 'border-muted-foreground/45 bg-transparent'
+                }`}>
+                  {form.situacaoEstoque === val && <div className="h-2 w-2 rounded-full bg-white" />}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 10. RUPTURA */}
+        <section className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-soft)] transition-colors hover:border-border/80">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
+              Ruptura <span className="text-brand-red font-bold">*</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <SectionBadge filled={sections.rupturaOk} />
+              <AlertTriangle size={16} className="text-muted-foreground opacity-60" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:max-w-md">
+            {['Sim', 'Não'].map(val => (
+              <div 
+                key={val}
+                onClick={() => setForm({ ...form, ruptura: val as any })}
+                className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
+                  form.ruptura === val 
+                    ? 'border-brand-red bg-brand-red/5 font-bold text-brand-red shadow-[0_0_12px_rgba(212,12,26,0.06)]' 
+                    : 'border-border bg-card hover:bg-secondary/40 text-foreground'
+                }`}
+              >
+                <span className="text-sm font-semibold">{val}</span>
+                <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center shrink-0 transition-all ${
+                  form.ruptura === val
+                    ? 'border-brand-red bg-brand-red'
+                    : 'border-muted-foreground/45 bg-transparent'
+                }`}>
+                  {form.ruptura === val && <div className="h-2 w-2 rounded-full bg-white" />}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* BOTTOM ACTIONS BAR */}
+        <div className="flex flex-wrap gap-3 sticky bottom-4 z-10 no-print pt-4 bg-background/80 backdrop-blur-md border-t border-border">
+          {/* Pending counter badge */}
+          {completionPercent < 100 && (
+            <div className="flex-1 sm:flex-none flex items-center gap-2 rounded-xl px-4 py-3 bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-bold">
+              <AlertTriangle size={14} />
+              {totalSections - completedCount} campo{totalSections - completedCount !== 1 ? 's' : ''} pendente{totalSections - completedCount !== 1 ? 's' : ''}
+            </div>
           )}
-          Salvar
-        </button>
+          {completionPercent === 100 && (
+            <div className="flex-1 sm:flex-none flex items-center gap-2 rounded-xl px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+              <CheckCircle2 size={14} />
+              Tudo preenchido! Pronto para salvar.
+            </div>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            style={{ backgroundImage: 'var(--gradient-accent)' }}
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-brand-red-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02] active:scale-[0.99] transition-transform disabled:opacity-60 disabled:hover:scale-100"
+          >
+            {loading ? (
+              <LoaderCircle className="animate-spin" size={18} />
+            ) : (
+              <Save size={18} />
+            )}
+            Salvar
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 

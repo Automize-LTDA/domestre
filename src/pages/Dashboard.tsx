@@ -12,18 +12,27 @@ import {
   Calendar,
   LoaderCircle,
   Smartphone,
-  X
+  X,
+  Bell,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react'
 
 export const Dashboard: React.FC = () => {
-  const { role } = useAuth()
+  const { role, user } = useAuth()
   const [showInstallBanner, setShowInstallBanner] = React.useState(false)
+  const [reminderDismissed, setReminderDismissed] = React.useState(false)
 
   React.useEffect(() => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone
     const isDismissed = localStorage.getItem('domestre.install_banner_dismissed') === 'true'
     if (!isStandalone && !isDismissed) {
       setShowInstallBanner(true)
+    }
+
+    const reminderDismissedUntil = localStorage.getItem('domestre.reminder_dismissed_until')
+    if (reminderDismissedUntil && new Date(reminderDismissedUntil) > new Date()) {
+      setReminderDismissed(true)
     }
   }, [])
 
@@ -52,6 +61,66 @@ export const Dashboard: React.FC = () => {
     },
     refetchOnWindowFocus: false
   })
+
+  // ── Promoter activity check ────────────────────────────────────────────────
+  const { data: promoterActivity } = useQuery({
+    queryKey: ['promoter-activity', user?.id],
+    enabled: role === 'promotor' && !!user?.id && !reminderDismissed,
+    queryFn: async () => {
+      const isMock = user?.id === '00000000-0000-0000-0000-000000000000'
+      if (isMock) return { lastVisitDate: null, visitedToday: false, daysSinceLastVisit: null }
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const threeDaysAgo = new Date(today)
+      threeDaysAgo.setDate(today.getDate() - 3)
+
+      const { data } = await supabase
+        .from('relatorios_visitas')
+        .select('created_at')
+        .eq('created_by', user!.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      if (!data || data.length === 0) {
+        return { lastVisitDate: null, visitedToday: false, daysSinceLastVisit: null }
+      }
+
+      const lastVisitDate = new Date(data[0].created_at)
+      const lastVisitDay = new Date(lastVisitDate)
+      lastVisitDay.setHours(0, 0, 0, 0)
+
+      const visitedToday = lastVisitDay.getTime() === today.getTime()
+      const diffMs = today.getTime() - lastVisitDay.getTime()
+      const daysSinceLastVisit = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+      return { lastVisitDate, visitedToday, daysSinceLastVisit }
+    },
+    refetchOnWindowFocus: false
+  })
+
+  function dismissReminder() {
+    // Dismiss for the rest of the day
+    const endOfDay = new Date()
+    endOfDay.setHours(23, 59, 59, 999)
+    localStorage.setItem('domestre.reminder_dismissed_until', endOfDay.toISOString())
+    setReminderDismissed(true)
+  }
+
+  // Determine reminder type
+  const showUrgentReminder = !reminderDismissed &&
+    role === 'promotor' &&
+    promoterActivity &&
+    promoterActivity.daysSinceLastVisit !== null &&
+    promoterActivity.daysSinceLastVisit >= 3
+
+  const showSoftReminder = !reminderDismissed &&
+    role === 'promotor' &&
+    promoterActivity &&
+    !promoterActivity.visitedToday &&
+    (promoterActivity.daysSinceLastVisit === null || promoterActivity.daysSinceLastVisit < 3)
+
+  const visitedToday = role === 'promotor' && promoterActivity?.visitedToday
 
   const quickAccessLinks = [
     {
@@ -118,6 +187,97 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
+      {/* ── PROMOTER: Visited today banner ─────────────────────────────────── */}
+      {visitedToday && !reminderDismissed && (
+        <div className="bg-emerald-600/10 border-b border-emerald-500/30 text-emerald-700 dark:text-emerald-400 py-3 px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-3 no-print">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
+              <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <p className="text-sm font-semibold">
+              ✅ Ótimo trabalho! Você já registrou uma visita hoje.
+            </p>
+          </div>
+          <button
+            onClick={dismissReminder}
+            className="p-1.5 rounded-lg hover:bg-emerald-500/20 transition-colors cursor-pointer text-emerald-600 dark:text-emerald-400"
+            aria-label="Fechar"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
+      {/* ── PROMOTER: Soft reminder (não visitou hoje, < 3 dias) ──────────── */}
+      {showSoftReminder && (
+        <div className="bg-amber-500/10 border-b border-amber-500/30 py-3.5 px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-3 no-print">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+              <Bell size={16} className="text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-400">
+                Você ainda não registrou uma visita hoje!
+              </p>
+              <p className="text-[10px] sm:text-xs text-amber-600/80 dark:text-amber-500/80">
+                {promoterActivity?.lastVisitDate
+                  ? `Último registro: ${new Date(promoterActivity.lastVisitDate).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })}`
+                  : 'Nenhum registro encontrado ainda.'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/visitas/novo"
+              className="px-3.5 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-bold hover:scale-[1.02] transition-transform shadow-sm"
+            >
+              Registrar agora
+            </Link>
+            <button
+              onClick={dismissReminder}
+              className="p-1.5 rounded-lg hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 transition-colors cursor-pointer"
+              aria-label="Fechar lembrete"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── PROMOTER: Urgent reminder (3+ dias sem visita) ────────────────── */}
+      {showUrgentReminder && (
+        <div className="bg-red-500/10 border-b border-red-500/30 py-3.5 px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-3 no-print">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
+              <AlertTriangle size={16} className="text-red-500" />
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-red-600 dark:text-red-400">
+                Atenção! Você não registra visitas há {promoterActivity!.daysSinceLastVisit} dias.
+              </p>
+              <p className="text-[10px] sm:text-xs text-red-500/80 dark:text-red-400/80">
+                Mantenha seus registros em dia para garantir o acompanhamento correto.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/visitas/novo"
+              className="px-3.5 py-1.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:scale-[1.02] transition-transform shadow-sm"
+            >
+              Registrar agora
+            </Link>
+            <button
+              onClick={dismissReminder}
+              className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-500 transition-colors cursor-pointer"
+              aria-label="Fechar lembrete"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* HERO SECTION */}
       <section className="relative overflow-hidden">
         {/* Background Gradients */}
@@ -136,7 +296,7 @@ export const Dashboard: React.FC = () => {
           <div className="flex flex-col items-start animate-fade-in-up">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
               Sistema de Controle <br />
-              <span className="text-brand-gold">de Avarias & Visitas</span>
+              <span className="text-brand-gold">de Avarias &amp; Visitas</span>
             </h1>
             
             <p className="mt-5 max-w-xl text-base sm:text-lg text-white/80 leading-relaxed">
