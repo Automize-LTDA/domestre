@@ -142,27 +142,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-border bg-card overflow-hidden">
             <nav className="flex flex-col px-4 py-3 gap-1">
-              <div className="px-4 py-3 mb-1 rounded-lg bg-secondary/60 flex items-center justify-between">
-                <div className="leading-tight">
-                  <div className="text-sm font-bold text-foreground flex items-center gap-1">
-                    {role === 'admin' && <ShieldCheck size={14} className="text-brand-red" />}
-                    {fullName || user.email?.split('@')[0]}
-                  </div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    {role === 'admin' ? 'Administrador' : role === 'promotor' ? 'Promotor' : 'Comum'}
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false)
-                    signOut()
-                  }}
-                  className="h-9 inline-flex items-center gap-1 rounded-lg border border-border px-3 text-xs font-semibold text-foreground hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors"
-                >
-                  <LogOut size={14} /> Sair
-                </button>
-              </div>
-
               {activeLinks.map(link => {
                 const isActive = location.pathname === link.to
                 return (
@@ -181,6 +160,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
                   </Link>
                 )
               })}
+
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  signOut()
+                }}
+                className="w-full px-4 py-3 rounded-lg text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-2 mt-2 border border-rose-100/50 cursor-pointer text-left"
+              >
+                <LogOut size={16} />
+                <span>Sair da Conta</span>
+              </button>
             </nav>
           </div>
         )}
