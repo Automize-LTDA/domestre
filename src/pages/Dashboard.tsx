@@ -135,6 +135,8 @@ export const Dashboard: React.FC = () => {
     return 'var(--gradient-hero)' // Navy standard
   }, [showUrgentReminder, showSoftReminder, visitedToday, reminderDismissed])
 
+  const showAlertCard = showUrgentReminder || showSoftReminder || (visitedToday && !reminderDismissed)
+
   const quickAccessLinks = [
     {
       to: '/novo',
@@ -216,7 +218,7 @@ export const Dashboard: React.FC = () => {
           <div className="grid lg:grid-cols-12 gap-12 items-center">
             
             {/* Left Content Column */}
-            <div className="lg:col-span-7 flex flex-col items-start animate-fade-in-up">
+            <div className={`${showAlertCard ? 'lg:col-span-7' : 'lg:col-span-12'} flex flex-col items-start animate-fade-in-up`}>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight">
                 Sistema de Controle <br />
                 <span className="text-brand-gold">de Avarias &amp; Visitas</span>
@@ -252,141 +254,117 @@ export const Dashboard: React.FC = () => {
             </div>
             
             {/* Right Alert/Info Card Column */}
-            <div className="lg:col-span-5 w-full animate-fade-in-up">
-              {showUrgentReminder && (
-                <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
-                  {/* Subtle diagonal stripe overlay */}
-                  <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, white 8px, white 9px)' }} />
-                  <div className="absolute top-0 right-0 p-4">
-                    <button onClick={dismissReminder} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Fechar lembrete">
-                      <X size={16} />
-                    </button>
-                  </div>
-                  <div className="flex items-start gap-4">
-                    <div className="relative shrink-0">
-                      <span className="absolute inline-flex h-10 w-10 rounded-full bg-red-400/40 animate-ping" />
-                      <div className="h-11 w-11 rounded-full bg-red-500/25 border border-red-300/40 flex items-center justify-center relative">
-                        <AlertTriangle size={20} className="text-red-200" />
+            {showAlertCard && (
+              <div className="lg:col-span-5 w-full animate-fade-in-up">
+                {showUrgentReminder && (
+                  <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
+                    {/* Subtle diagonal stripe overlay */}
+                    <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, white 8px, white 9px)' }} />
+                    <div className="absolute top-0 right-0 p-4">
+                      <button onClick={dismissReminder} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Fechar lembrete">
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <div className="relative shrink-0">
+                        <span className="absolute inline-flex h-10 w-10 rounded-full bg-red-400/40 animate-ping" />
+                        <div className="h-11 w-11 rounded-full bg-red-500/25 border border-red-300/40 flex items-center justify-center relative">
+                          <AlertTriangle size={20} className="text-red-200" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 text-red-200 text-[10px] font-black px-2 py-0.5 border border-red-500/30 uppercase tracking-wider">
+                          Atenção Crítica
+                        </span>
+                        <h3 className="text-xl font-bold leading-tight mt-1">Registro Muito Atrasado</h3>
+                        <p className="text-sm text-white/80 leading-normal">
+                          Você está há <strong className="text-white font-extrabold">{promoterActivity!.daysSinceLastVisit} dias</strong> sem registrar nenhuma visita. O registro diário é obrigatório.
+                        </p>
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 text-red-200 text-[10px] font-black px-2 py-0.5 border border-red-500/30 uppercase tracking-wider">
-                        Atenção Crítica
-                      </span>
-                      <h3 className="text-xl font-bold leading-tight mt-1">Registro Muito Atrasado</h3>
-                      <p className="text-sm text-white/80 leading-normal">
-                        Você está há <strong className="text-white font-extrabold">{promoterActivity!.daysSinceLastVisit} dias</strong> sem registrar nenhuma visita. O registro diário é obrigatório.
-                      </p>
+                    <div className="mt-6">
+                      <Link
+                        to="/visitas/novo"
+                        className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl bg-white text-red-800 text-sm font-bold hover:bg-white/95 active:scale-[0.98] transition-transform shadow-md"
+                      >
+                        <Calendar size={16} />
+                        Registrar Visita Agora
+                      </Link>
                     </div>
                   </div>
-                  <div className="mt-6">
-                    <Link
-                      to="/visitas/novo"
-                      className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl bg-white text-red-800 text-sm font-bold hover:bg-white/95 active:scale-[0.98] transition-transform shadow-md"
-                    >
-                      <Calendar size={16} />
-                      Registrar Visita Agora
-                    </Link>
-                  </div>
-                </div>
-              )}
+                )}
 
-              {showSoftReminder && (
-                <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
-                  {/* Subtle diagonal stripe overlay */}
-                  <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, white 8px, white 9px)' }} />
-                  <div className="absolute top-0 right-0 p-4">
-                    <button onClick={dismissReminder} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Fechar lembrete">
-                      <X size={16} />
-                    </button>
-                  </div>
-                  <div className="flex items-start gap-4">
-                    <div className="relative shrink-0">
-                      <span className="absolute inline-flex h-10 w-10 rounded-full bg-amber-400/40 animate-ping" />
-                      <div className="h-11 w-11 rounded-full bg-amber-500/25 border border-amber-300/40 flex items-center justify-center relative">
-                        <Bell size={20} className="text-amber-200" />
+                {showSoftReminder && (
+                  <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
+                    {/* Subtle diagonal stripe overlay */}
+                    <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, white 8px, white 9px)' }} />
+                    <div className="absolute top-0 right-0 p-4">
+                      <button onClick={dismissReminder} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Fechar lembrete">
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <div className="relative shrink-0">
+                        <span className="absolute inline-flex h-10 w-10 rounded-full bg-amber-400/40 animate-ping" />
+                        <div className="h-11 w-11 rounded-full bg-amber-500/25 border border-amber-300/40 flex items-center justify-center relative">
+                          <Bell size={20} className="text-amber-200" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 text-amber-200 text-[10px] font-black px-2 py-0.5 border border-amber-500/30 uppercase tracking-wider">
+                          Lembrete Diário
+                        </span>
+                        <h3 className="text-xl font-bold leading-tight mt-1">Registrar Visita de Hoje</h3>
+                        <p className="text-sm text-white/80 leading-normal">
+                          Sua visita de hoje ainda não foi registrada. Atualize o sistema para manter seu relatório em dia.
+                        </p>
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 text-amber-200 text-[10px] font-black px-2 py-0.5 border border-amber-500/30 uppercase tracking-wider">
-                        Lembrete Diário
-                      </span>
-                      <h3 className="text-xl font-bold leading-tight mt-1">Registrar Visita de Hoje</h3>
-                      <p className="text-sm text-white/80 leading-normal">
-                        Sua visita de hoje ainda não foi registrada. Atualize o sistema para manter seu relatório em dia.
-                      </p>
+                    <div className="mt-6">
+                      <Link
+                        to="/visitas/novo"
+                        className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl bg-white text-amber-800 text-sm font-bold hover:bg-white/95 active:scale-[0.98] transition-transform shadow-md"
+                      >
+                        <Calendar size={16} />
+                        Registrar Visita
+                      </Link>
                     </div>
                   </div>
-                  <div className="mt-6">
-                    <Link
-                      to="/visitas/novo"
-                      className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl bg-white text-amber-800 text-sm font-bold hover:bg-white/95 active:scale-[0.98] transition-transform shadow-md"
-                    >
-                      <Calendar size={16} />
-                      Registrar Visita
-                    </Link>
-                  </div>
-                </div>
-              )}
+                )}
 
-              {visitedToday && !reminderDismissed && (
-                <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
-                  <div className="absolute top-0 right-0 p-4">
-                    <button onClick={dismissReminder} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Fechar">
-                      <X size={16} />
-                    </button>
-                  </div>
-                  <div className="flex items-start gap-4">
-                    <div className="shrink-0">
-                      <div className="h-11 w-11 rounded-full bg-emerald-500/25 border border-emerald-300/40 flex items-center justify-center">
-                        <CheckCircle2 size={20} className="text-emerald-200" />
+                {visitedToday && !reminderDismissed && (
+                  <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
+                    <div className="absolute top-0 right-0 p-4">
+                      <button onClick={dismissReminder} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Fechar">
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <div className="shrink-0">
+                        <div className="h-11 w-11 rounded-full bg-emerald-500/25 border border-emerald-300/40 flex items-center justify-center">
+                          <CheckCircle2 size={20} className="text-emerald-200" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 text-emerald-200 text-[10px] font-black px-2 py-0.5 border border-emerald-500/30 uppercase tracking-wider">
+                          Atualizado
+                        </span>
+                        <h3 className="text-xl font-bold leading-tight mt-1">Tudo Pronto por Hoje!</h3>
+                        <p className="text-sm text-white/80 leading-normal">
+                          Sua visita de hoje já foi registrada no sistema. Obrigado por manter seus relatórios atualizados!
+                        </p>
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 text-emerald-200 text-[10px] font-black px-2 py-0.5 border border-emerald-500/30 uppercase tracking-wider">
-                        Atualizado
-                      </span>
-                      <h3 className="text-xl font-bold leading-tight mt-1">Tudo Pronto por Hoje!</h3>
-                      <p className="text-sm text-white/80 leading-normal">
-                        Sua visita de hoje já foi registrada no sistema. Obrigado por manter seus relatórios atualizados!
-                      </p>
+                    <div className="mt-6">
+                      <div className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl bg-white/10 border border-white/10 text-white text-sm font-bold">
+                        <CheckCircle2 size={16} className="text-emerald-300" />
+                        Relatório de hoje enviado
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-6">
-                    <div className="inline-flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl bg-white/10 border border-white/10 text-white text-sm font-bold">
-                      <CheckCircle2 size={16} className="text-emerald-300" />
-                      Relatório de hoje enviado
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Default welcome info card for when no active alert or non-promoter */}
-              {(!showUrgentReminder && !showSoftReminder && (!visitedToday || reminderDismissed)) && (
-                <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
-                  <div className="space-y-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/15 text-white/90 text-[10px] font-bold px-2.5 py-0.5 uppercase tracking-wider">
-                      Painel Geral
-                    </span>
-                    <h3 className="text-xl font-bold leading-tight">Do Mestre SaaS</h3>
-                    <p className="text-sm text-white/75 leading-relaxed">
-                      Acompanhe em tempo real as atividades, visitas às filiais e relatórios de avarias gerados pela equipe de promotores.
-                    </p>
-                  </div>
-                  
-                  <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 gap-4 text-center">
-                    <div>
-                      <div className="text-2xl font-bold font-display text-brand-gold">{stats?.totalVisitas || 0}</div>
-                      <div className="text-[10px] uppercase tracking-wider text-white/60 font-semibold mt-0.5">Visitas</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold font-display text-brand-gold">{stats?.totalAvarias || 0}</div>
-                      <div className="text-[10px] uppercase tracking-wider text-white/60 font-semibold mt-0.5">Avarias</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
           </div>
         </div>
