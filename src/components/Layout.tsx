@@ -66,9 +66,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
     return true
   })
 
-  if (role === 'admin') {
-    activeLinks.push({ to: '/admin', label: 'Administração', icon: ShieldCheck })
-  }
+
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
