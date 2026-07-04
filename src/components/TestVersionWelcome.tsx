@@ -47,12 +47,38 @@ export const TestVersionWelcome: React.FC = () => {
           </div>
           
           <h2 className="text-2xl font-bold text-foreground mb-3 font-display">
-            Bem-vindo ao Sistema!
+            Domestre SaaS <span className="text-brand-red">—</span> Beta
           </h2>
           
-          <p className="text-muted-foreground text-sm leading-relaxed mb-8">
-            Esta é uma versão inicial de demonstração do nosso sistema. Explore, teste os fluxos e aproveite a experiência antes do lançamento oficial.
-          </p>
+          <div className="space-y-4 mb-8 text-left">
+            <p className="text-muted-foreground text-[13px] leading-relaxed text-center">
+              Bem-vindo ao ambiente oficial de homologação. Esta versão foi projetada com tecnologia de ponta para validar nossa inovadora solução de <strong>Gestão de Visitas e Avarias</strong>.
+            </p>
+            
+            <div className="bg-secondary/30 rounded-xl p-4 border border-border/50 shadow-inner">
+              <h3 className="text-[11px] font-black text-brand-navy uppercase tracking-wider mb-3 text-center">
+                O que você deve testar
+              </h3>
+              <ul className="space-y-2.5 text-[13px] text-foreground font-medium">
+                <li className="flex items-center gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                  Dashboard dinâmico com Gameficação
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]"></div>
+                  Formulários inteligentes de alto desempenho
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-brand-red shadow-[0_0_8px_rgba(225,29,72,0.8)]"></div>
+                  Experiência Premium 100% Mobile-First
+                </li>
+              </ul>
+            </div>
+            
+            <p className="text-[12px] text-muted-foreground text-center font-medium">
+              Todo o sistema está operando em tempo real. Fique à vontade para adicionar registros e explorar os fluxos!
+            </p>
+          </div>
 
           <div className="bg-secondary/40 rounded-2xl p-4 border border-border/50 text-left mb-8 flex items-center gap-4">
             <div className="h-10 w-10 shrink-0 bg-brand-navy/5 rounded-xl flex items-center justify-center text-brand-navy">
