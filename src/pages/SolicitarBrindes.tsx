@@ -5,7 +5,7 @@ import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { 
-  Gift, Send, LoaderCircle, Package, User, Building2, AlignLeft, Hash, 
+  Gift, Send, LoaderCircle, Package, Building2, AlignLeft, Hash, 
   Search, X, CheckCircle2, Clock, Inbox, AlertTriangle, Plus
 } from 'lucide-react'
 
@@ -347,7 +347,6 @@ export const SolicitarBrindes: React.FC = () => {
               <thead className="bg-secondary/40 text-[10px] uppercase font-black text-muted-foreground border-b border-border tracking-[0.1em]">
                 <tr>
                   <th className="px-6 py-4">Data</th>
-                  <th className="px-6 py-4">Vendedor</th>
                   <th className="px-6 py-4">Empresa</th>
                   <th className="px-6 py-4 text-center">Brinde</th>
                   <th className="px-6 py-4 text-center">Quantidade</th>
@@ -383,12 +382,6 @@ export const SolicitarBrindes: React.FC = () => {
                         </div>
                         <div className="text-[10px] font-medium text-muted-foreground">
                           {new Date(sol.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <User size={13} className="text-muted-foreground" />
-                          <span className="font-semibold text-xs text-foreground/90">{sol.requester_name || sol.promotor_name || 'Vendedor'}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
