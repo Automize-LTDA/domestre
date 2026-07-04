@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { 
   Gift, Send, LoaderCircle, Package, User, Building2, AlignLeft, Hash, 
-  Search, X, CheckCircle2, Clock, Inbox, AlertTriangle
+  Search, X, CheckCircle2, Clock, Inbox, AlertTriangle, Plus
 } from 'lucide-react'
 
 // Mock do catálogo
@@ -58,11 +58,12 @@ export const SolicitarBrindes: React.FC = () => {
   
   // Estado do Modal
   const [modalOpen, setModalOpen] = useState(false)
-  const [selectedBrinde, setSelectedBrinde] = useState<typeof CATALOGO_BRINDES[0] | null>(null)
+  const [selectedBrindeObj, setSelectedBrindeObj] = useState<typeof CATALOGO_BRINDES[0] | null>(null)
   
   // Estado do Formulário
   const [empresaId, setEmpresaId] = useState('')
   const [empresaNome, setEmpresaNome] = useState('')
+  const [brindeManual, setBrindeManual] = useState('')
   const [quantidade, setQuantidade] = useState(1)
   const [justificativa, setJustificativa] = useState('')
 
@@ -95,7 +96,9 @@ export const SolicitarBrindes: React.FC = () => {
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!empresaNome) throw new Error('Selecione uma empresa.')
-      if (!selectedBrinde) throw new Error('Nenhum brinde selecionado.')
+      
+      const brindeFinal = selectedBrindeObj ? selectedBrindeObj.nome : brindeManual
+      if (!brindeFinal) throw new Error('Selecione um brinde.')
       if (quantidade < 1) throw new Error('Quantidade deve ser pelo menos 1.')
       
       const { error } = await supabase
@@ -105,7 +108,7 @@ export const SolicitarBrindes: React.FC = () => {
           requester_name: fullName || user?.email,
           empresa_id: empresaId || null,
           empresa_nome: empresaNome,
-          brinde_tipo: selectedBrinde.nome,
+          brinde_tipo: brindeFinal,
           quantidade: quantidade,
           justificativa: justificativa || 'Nenhuma',
           status: 'Pendente'
@@ -123,10 +126,11 @@ export const SolicitarBrindes: React.FC = () => {
     }
   })
 
-  const handleOpenModal = (brinde: typeof CATALOGO_BRINDES[0]) => {
-    setSelectedBrinde(brinde)
+  const handleOpenModal = (brinde?: typeof CATALOGO_BRINDES[0]) => {
+    setSelectedBrindeObj(brinde || null)
     setEmpresaId('')
     setEmpresaNome('')
+    setBrindeManual(brinde ? brinde.nome : '')
     setQuantidade(1)
     setJustificativa('')
     setModalOpen(true)
@@ -134,7 +138,10 @@ export const SolicitarBrindes: React.FC = () => {
 
   const closeModal = () => {
     setModalOpen(false)
-    setTimeout(() => setSelectedBrinde(null), 300)
+    setTimeout(() => {
+      setSelectedBrindeObj(null)
+      setBrindeManual('')
+    }, 300)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -198,22 +205,30 @@ export const SolicitarBrindes: React.FC = () => {
 
   return (
     <Layout>
-      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         
         {/* HEADER DA PÁGINA */}
-        <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-brand-red mb-1">
-              OPERAÇÃO COMERCIAL
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-red">
+              Operação Comercial
             </p>
-            <h1 className="text-3xl font-black text-brand-navy font-display flex items-center gap-3">
-              <Gift size={28} className="text-brand-navy" />
+            <h1 className="mt-2 text-3xl sm:text-4xl font-bold text-brand-navy flex items-center gap-3">
+              <Gift size={32} className="text-brand-navy" />
               Solicitação de Brindes
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground">
               Solicite brindes promocionais e institucionais para entrega aos clientes em visitas comerciais.
             </p>
           </div>
+          
+          <button
+            onClick={() => handleOpenModal()}
+            className="flex items-center gap-2 rounded-xl bg-brand-navy px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-brand-navy/20 hover:bg-brand-navy/90 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Plus size={18} />
+            Nova Solicitação
+          </button>
         </header>
 
         {/* CARDS DE ESTATÍSTICAS */}
@@ -257,8 +272,8 @@ export const SolicitarBrindes: React.FC = () => {
         </div>
 
         {/* CATÁLOGO DE PRODUTOS */}
-        <div className="bg-card border border-border shadow-[var(--shadow-soft)] rounded-[32px] p-6 mb-8">
-          <div className="mb-6">
+        <div className="bg-card border border-border shadow-[var(--shadow-soft)] rounded-[32px] p-6 sm:p-8 mb-8">
+          <div className="mb-8">
             <h2 className="text-sm font-black text-brand-red flex items-center gap-2 uppercase tracking-widest">
               <Package size={16} />
               Brindes Oficiais Disponíveis
@@ -268,9 +283,9 @@ export const SolicitarBrindes: React.FC = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             {CATALOGO_BRINDES.map(brinde => (
-              <div key={brinde.id} className="group flex flex-col bg-background border border-border rounded-2xl overflow-hidden hover:border-brand-navy/30 hover:shadow-lg transition-all">
+              <div key={brinde.id} className="group flex flex-col bg-background border border-border rounded-2xl overflow-hidden hover:border-brand-navy/30 hover:shadow-lg hover:shadow-brand-navy/5 transition-all">
                 <div className="aspect-[4/3] relative overflow-hidden bg-secondary">
                   <img 
                     src={brinde.imagem} 
@@ -301,8 +316,8 @@ export const SolicitarBrindes: React.FC = () => {
         </div>
 
         {/* FILTROS E BUSCA */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4 bg-card border border-border shadow-[var(--shadow-soft)] rounded-full p-2">
-          <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto px-2">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4 bg-card border border-border shadow-[var(--shadow-soft)] rounded-2xl md:rounded-full p-2">
+          <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto px-2 pb-2 md:pb-0 scrollbar-hide">
             {['Todos', 'Pendentes', 'Aprovados', 'Recusados', 'Entregues'].map(tab => (
               <button
                 key={tab}
@@ -318,13 +333,13 @@ export const SolicitarBrindes: React.FC = () => {
             ))}
           </div>
           <div className="relative w-full md:w-72 shrink-0 pr-2 pb-2 md:pb-0">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground md:top-[20px]" />
             <input
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Buscar brinde ou empresa..."
-              className="w-full h-10 rounded-full border border-border bg-background pl-11 pr-4 text-xs focus:border-brand-navy focus:ring-1 focus:ring-brand-navy transition-colors"
+              className="w-full h-10 md:mt-0 mt-0 rounded-full border border-border bg-background pl-11 pr-4 text-xs focus:border-brand-navy focus:ring-1 focus:ring-brand-navy transition-colors"
             />
           </div>
         </div>
@@ -424,22 +439,37 @@ export const SolicitarBrindes: React.FC = () => {
       </div>
 
       {/* MODAL DE SOLICITAÇÃO FLUTUANTE */}
-      {modalOpen && selectedBrinde && (
+      {modalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="relative w-full max-w-lg bg-card border border-border rounded-[32px] shadow-2xl overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
             
-            <button onClick={closeModal} className="absolute top-5 right-5 h-8 w-8 rounded-full bg-secondary text-muted-foreground hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center transition-colors z-10">
+            <button onClick={closeModal} className="absolute top-5 right-5 h-8 w-8 rounded-full bg-secondary text-muted-foreground hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center transition-colors z-20">
               <X size={16} />
             </button>
 
-            <div className="h-32 relative overflow-hidden bg-brand-navy">
-              <img src={selectedBrinde.imagem} alt="Brinde" className="w-full h-full object-cover opacity-40 mix-blend-luminosity" />
-              <div className="absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/60 to-transparent"></div>
-              <div className="absolute bottom-5 left-6">
-                <p className="text-[10px] font-black text-brand-red uppercase tracking-wider mb-1">NOVA SOLICITAÇÃO</p>
-                <h2 className="text-2xl font-bold text-white font-display leading-none">{selectedBrinde.nome}</h2>
+            {/* Cabeçalho do Modal (Com ou Sem Imagem dependendo da Origem) */}
+            {selectedBrindeObj ? (
+              <div className="h-32 relative overflow-hidden bg-brand-navy">
+                <img src={selectedBrindeObj.imagem} alt="Brinde" className="w-full h-full object-cover opacity-40 mix-blend-luminosity" />
+                <div className="absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/60 to-transparent"></div>
+                <div className="absolute bottom-5 left-6">
+                  <p className="text-[10px] font-black text-brand-red uppercase tracking-wider mb-1">NOVA SOLICITAÇÃO</p>
+                  <h2 className="text-2xl font-bold text-white font-display leading-none">{selectedBrindeObj.nome}</h2>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="h-28 relative overflow-hidden bg-brand-navy/5 flex items-center px-6 border-b border-border">
+                <div>
+                  <h2 className="text-xl font-black text-brand-navy font-display flex items-center gap-2">
+                    <Gift size={22} className="text-brand-red" />
+                    Solicitar Brinde
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Preencha os dados abaixo para fazer uma nova solicitação manual.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               
@@ -449,6 +479,46 @@ export const SolicitarBrindes: React.FC = () => {
                   As solicitações estão sujeitas à aprovação da diretoria e disponibilidade em estoque. Certifique-se de preencher a justificativa caso a quantidade seja alta.
                 </p>
               </div>
+
+              {/* Se não veio com brinde pré-selecionado, mostra o campo para selecionar */}
+              {!selectedBrindeObj && (
+                <div>
+                  <label className="block text-[11px] font-bold text-foreground mb-1.5 uppercase tracking-wider">
+                    Brinde Desejado <span className="text-brand-red">*</span>
+                  </label>
+                  <div className="relative">
+                    <Gift className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <select
+                      required
+                      value={brindeManual}
+                      onChange={e => setBrindeManual(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-background pl-11 pr-4 py-3 text-xs font-bold focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy transition-colors appearance-none"
+                    >
+                      <option value="">Selecione o brinde...</option>
+                      {CATALOGO_BRINDES.map(b => (
+                        <option key={b.id} value={b.nome}>{b.nome}</option>
+                      ))}
+                      <option value="Outro (Especificar)">Outro (Especificar)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Se selecionou 'Outro', abre campo texto livre */}
+              {!selectedBrindeObj && brindeManual === 'Outro (Especificar)' && (
+                <div>
+                  <label className="block text-[11px] font-bold text-foreground mb-1.5 uppercase tracking-wider">
+                    Qual Brinde? <span className="text-brand-red">*</span>
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    onChange={e => setBrindeManual(e.target.value)} // Sobrescreve 'Outro' pelo que digitar, pra mandar pro BD
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-xs font-medium focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy transition-colors"
+                    placeholder="Descreva o material promocional..."
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-[11px] font-bold text-foreground mb-1.5 uppercase tracking-wider">
