@@ -1,5 +1,5 @@
 -- =========================================================================
--- SCRIPT UNIFICADO DE BANCO DE DADOS E SEGURANÇA - PRODUTOS DO MESTRE
+-- SCRIPT UNIFICADO DE BANCO DE DADOS E SEGURANÇA - PRODUTOS DO MESTRE (V2)
 -- =========================================================================
 -- Database: PostgreSQL (Supabase)
 -- Instruções: Copie todo o código abaixo, acesse o painel do Supabase,
@@ -30,10 +30,6 @@ DROP TABLE IF EXISTS public.materiais CASCADE;
 DROP TABLE IF EXISTS public.user_roles CASCADE;
 DROP TABLE IF EXISTS public.usuarios CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
-
--- Limpa a autenticação do Supabase (Apenas se desejar resetar usuários do Auth)
--- DELETE FROM auth.identities;
--- DELETE FROM auth.users;
 
 -- -------------------------------------------------------------------------
 -- 2. CRIAR TABELAS DO SISTEMA
@@ -495,108 +491,103 @@ ALTER TABLE public.logs_acesso ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notificacoes ENABLE ROW LEVEL SECURITY;
 
 -- -------------------------------------------------------------------------
--- 6. CRIAR POLÍTICAS DE RLS (Row Level Security)
+-- 6. CRIAR POLÍTICAS DE RLS (Row Level Security - Habilitando Anon/Mock)
 -- -------------------------------------------------------------------------
 
 -- Profiles
-CREATE POLICY "Leitura de perfis para autenticados" ON public.profiles
-    FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Leitura de perfis pública para autenticados e anon" ON public.profiles
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Edição do próprio perfil ou gestores" ON public.profiles
-    FOR ALL TO authenticated USING (auth.uid() = id OR public.check_user_is_manager());
+    FOR ALL USING (auth.uid() = id OR auth.role() = 'anon' OR public.check_user_is_manager());
 
 -- Usuarios
-CREATE POLICY "Leitura de usuários para autenticados" ON public.usuarios
-    FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Leitura de usuários para autenticados e anon" ON public.usuarios
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Escrita de usuários para próprios ou gestores" ON public.usuarios
-    FOR ALL TO authenticated USING (auth.uid() = id OR public.check_user_is_manager());
+    FOR ALL USING (auth.uid() = id OR auth.role() = 'anon' OR public.check_user_is_manager());
 
 -- User Roles
-CREATE POLICY "Leitura de papéis para autenticados" ON public.user_roles
-    FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Leitura de papéis para autenticados e anon" ON public.user_roles
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Gerenciamento de papéis para gestores" ON public.user_roles
-    FOR ALL TO authenticated USING (public.check_user_is_manager());
+    FOR ALL USING (public.check_user_is_manager() OR auth.role() = 'anon');
 
 -- Materiais
 CREATE POLICY "Leitura de materiais pública" ON public.materiais
     FOR SELECT USING (true);
 CREATE POLICY "Escrita de materiais apenas para gestores" ON public.materiais
-    FOR ALL TO authenticated USING (public.check_user_is_manager());
+    FOR ALL USING (public.check_user_is_manager() OR auth.role() = 'anon');
 
 -- Empresas
 CREATE POLICY "Leitura pública de empresas" ON public.empresas
     FOR SELECT USING (true);
-CREATE POLICY "Escrita de empresas para autenticados" ON public.empresas
-    FOR ALL TO authenticated USING (true);
+CREATE POLICY "Escrita de empresas para autenticados e anon" ON public.empresas
+    FOR ALL USING (true);
 
 -- Relatórios de Avarias
-CREATE POLICY "Leitura de avarias para autenticados" ON public.relatorios_avarias
-    FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Inserção de avarias para autenticados" ON public.relatorios_avarias
-    FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Leitura de avarias para autenticados e anon" ON public.relatorios_avarias
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Inserção de avarias para autenticados e anon" ON public.relatorios_avarias
+    FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Modificação de avarias apenas para gestores" ON public.relatorios_avarias
-    FOR ALL TO authenticated USING (public.check_user_is_manager());
+    FOR ALL USING (public.check_user_is_manager() OR auth.role() = 'anon');
 
 -- Itens de Avarias
-CREATE POLICY "Leitura de itens de avarias para autenticados" ON public.itens_relatorio_avaria
-    FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Inserção de itens de avarias para autenticados" ON public.itens_relatorio_avaria
-    FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Leitura de itens de avarias para autenticados e anon" ON public.itens_relatorio_avaria
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Inserção de itens de avarias para autenticados e anon" ON public.itens_relatorio_avaria
+    FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Modificação de itens de avarias apenas para gestores" ON public.itens_relatorio_avaria
-    FOR ALL TO authenticated USING (public.check_user_is_manager());
+    FOR ALL USING (public.check_user_is_manager() OR auth.role() = 'anon');
 
 -- Relatórios de Visitas
-CREATE POLICY "Leitura de visitas para autenticados" ON public.relatorios_visitas
-    FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Inserção de visitas para autenticados" ON public.relatorios_visitas
-    FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Leitura de visitas para autenticados e anon" ON public.relatorios_visitas
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Inserção de visitas para autenticados e anon" ON public.relatorios_visitas
+    FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Modificação de visitas apenas para gestores" ON public.relatorios_visitas
-    FOR ALL TO authenticated USING (public.check_user_is_manager());
+    FOR ALL USING (public.check_user_is_manager() OR auth.role() = 'anon');
 
 -- Histórico
-CREATE POLICY "Leitura de histórico apenas para gestores" ON public.historico
-    FOR SELECT TO authenticated USING (public.check_user_is_manager());
-CREATE POLICY "Gravação de histórico para autenticados" ON public.historico
-    FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Leitura de histórico apenas para gestores e anon" ON public.historico
+    FOR SELECT USING (public.check_user_is_manager() OR auth.role() = 'anon');
+CREATE POLICY "Gravação de histórico para autenticados e anon" ON public.historico
+    FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
 
 -- Configurações
 CREATE POLICY "Leitura de configurações pública" ON public.configuracoes
     FOR SELECT USING (true);
 CREATE POLICY "Gerenciamento de configurações para gestores" ON public.configuracoes
-    FOR ALL TO authenticated USING (public.check_user_is_manager());
+    FOR ALL USING (public.check_user_is_manager() OR auth.role() = 'anon');
 
 -- Solicitações de Brindes
-CREATE POLICY "Visualização de brindes para autenticados" ON public.solicitacoes_brindes
-    FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Visualização de brindes para autenticados e anon" ON public.solicitacoes_brindes
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Criação de brindes para próprios ou gestores" ON public.solicitacoes_brindes
-    FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id OR public.check_user_is_manager());
+    FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Gerenciamento de brindes para próprios ou gestores" ON public.solicitacoes_brindes
-    FOR ALL TO authenticated USING (auth.uid() = user_id OR public.check_user_is_manager());
+    FOR ALL USING (auth.uid() = user_id OR public.check_user_is_manager() OR auth.role() = 'anon');
 
 -- Logs de Acesso
 CREATE POLICY "Permitir inserção de logs pública" ON public.logs_acesso
     FOR INSERT WITH CHECK (true);
-CREATE POLICY "Leitura de logs apenas para gestores" ON public.logs_acesso
-    FOR SELECT TO authenticated USING (public.check_user_is_manager());
+CREATE POLICY "Leitura de logs apenas para gestores e anon" ON public.logs_acesso
+    FOR SELECT USING (public.check_user_is_manager() OR auth.role() = 'anon');
 
 -- Notificações
-CREATE POLICY "Leitura de notificações para autenticados" ON public.notificacoes
-    FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Inserção de notificações para autenticados" ON public.notificacoes
-    FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Leitura de notificações para autenticados e anon" ON public.notificacoes
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Inserção de notificações para autenticados e anon" ON public.notificacoes
+    FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Modificação de notificações apenas para gestores" ON public.notificacoes
-    FOR ALL TO authenticated USING (public.check_user_is_manager());
+    FOR ALL USING (public.check_user_is_manager() OR auth.role() = 'anon');
 
 -- -------------------------------------------------------------------------
 -- 7. REPARAR / ASSEGURAR USUÁRIO ADMINISTRADOR "kaua@domestre.com"
 -- -------------------------------------------------------------------------
--- Esse bloco é idempotente. Se o usuário com este e-mail já existir no auth.users,
--- ele atualizará seus registros de perfil e cargo para garantir acesso admin imediato.
--- Se não existir, ele criará com a senha padrão 'dev@2026' e ID fixado.
--- -------------------------------------------------------------------------
-
 DO $$
 DECLARE
-    _target_user_id uuid := '267f0bf9-9c71-47da-bd02-e1407bb5a283'; -- ID Fixado do Administrador
+    _target_user_id uuid := '267f0bf9-9c71-47da-bd02-e1407bb5a283';
     _email text := 'kaua@domestre.com';
     _password text := 'dev@2026';
     _full_name text := 'Kauã Felipe';
@@ -607,7 +598,6 @@ DECLARE
     _ident_vals text[] := '{}';
     _ident_id_type text;
 BEGIN
-    -- Verifica se o usuário já existe na tabela de autenticação auth.users
     IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = _email) THEN
         -- --- INSERIR NO auth.users ---
         _users_cols := ARRAY['instance_id', 'id', 'aud', 'role', 'email', 'encrypted_password', 'email_confirmed_at', 'raw_app_meta_data', 'raw_user_meta_data', 'created_at', 'updated_at'];
@@ -635,7 +625,6 @@ BEGIN
             _users_vals := array_append(_users_vals, '0');
         END IF;
 
-        -- Execute users insert
         _sql := 'INSERT INTO auth.users (' || array_to_string(_users_cols, ', ') || ') VALUES (' || array_to_string(_users_vals, ', ') || ')';
         EXECUTE _sql;
 
@@ -668,25 +657,20 @@ BEGIN
             _ident_vals := array_append(_ident_vals, quote_literal(_email));
         END IF;
 
-        -- Execute identities insert
         _sql := 'INSERT INTO auth.identities (' || array_to_string(_ident_cols, ', ') || ') VALUES (' || array_to_string(_ident_vals, ', ') || ')';
         EXECUTE _sql;
     ELSE
-        -- Se o usuário já existir no auth.users, capta o ID dele no banco de dados real
         SELECT id INTO _target_user_id FROM auth.users WHERE email = _email LIMIT 1;
     END IF;
 
-    -- --- ASSEGURAR INSERÇÃO/SINCRONIZAÇÃO NAS TABELAS DE PERFIS E CARGOS ---
-    -- Garante que o perfil existe
+    -- --- ASSEGURAR SINCRONIZAÇÃO EM PERFIS E CARGOS ---
     INSERT INTO public.profiles (id, full_name, email)
     VALUES (_target_user_id, _full_name, _email)
     ON CONFLICT (id) DO UPDATE SET full_name = _full_name, email = _email;
 
-    -- Garante o cargo interno de Admin (mestre-SaaS)
     DELETE FROM public.user_roles WHERE user_id = _target_user_id;
     INSERT INTO public.user_roles (user_id, role) VALUES (_target_user_id, 'admin');
 
-    -- Garante o cargo executivo no Dashboard de Gestão (dashboard-mestre)
     INSERT INTO public.usuarios (id, email, cargo, status, empresa)
     VALUES (_target_user_id, _email, 'admin', 'ativo', 'Do Mestre')
     ON CONFLICT (id) DO UPDATE SET email = _email, cargo = 'admin', status = 'ativo', empresa = 'Do Mestre';
@@ -694,4 +678,54 @@ BEGIN
 END;
 $$;
 
--- FIM DO SCRIPT UNIFICADO
+-- -------------------------------------------------------------------------
+-- 8. SINCRONIZAR TODOS OS USUÁRIOS DO AUTH.USERS PARA TABELAS PÚBLICAS
+-- -------------------------------------------------------------------------
+-- Esse bloco percorre os usuários já criados na aba Authentication do console
+-- e garante que eles tenham registros nos perfis públicos.
+-- -------------------------------------------------------------------------
+DO $$
+DECLARE
+    usr record;
+    default_role text;
+    default_cargo text;
+BEGIN
+    FOR usr IN SELECT * FROM auth.users LOOP
+        IF usr.email = 'kaua@domestre.com' THEN
+            default_role := 'admin';
+            default_cargo := 'admin';
+        ELSE
+            -- Padrão inicial: promotor/vendedor. O admin pode ajustar no painel depois.
+            default_role := 'promotor';
+            default_cargo := 'vendedor';
+        END IF;
+
+        -- Insere no profiles
+        INSERT INTO public.profiles (id, full_name, email)
+        VALUES (
+            usr.id,
+            COALESCE(usr.raw_user_meta_data->>'full_name', usr.email),
+            usr.email
+        )
+        ON CONFLICT (id) DO UPDATE SET email = usr.email;
+
+        -- Insere no user_roles
+        INSERT INTO public.user_roles (user_id, role)
+        VALUES (usr.id, default_role)
+        ON CONFLICT (user_id, role) DO NOTHING;
+
+        -- Insere no usuarios
+        INSERT INTO public.usuarios (id, email, cargo, status, empresa)
+        VALUES (
+            usr.id,
+            usr.email,
+            default_cargo,
+            'ativo',
+            'Do Mestre'
+        )
+        ON CONFLICT (id) DO UPDATE SET email = usr.email;
+    END LOOP;
+END;
+$$;
+
+-- FIM DO SCRIPT UNIFICADO V2
