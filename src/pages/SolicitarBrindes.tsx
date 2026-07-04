@@ -1,18 +1,51 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Layout } from '../components/Layout'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { Gift, Send, LoaderCircle, Package, User, Building2, AlignLeft, Hash } from 'lucide-react'
+import { 
+  Gift, Send, LoaderCircle, Package, User, Building2, AlignLeft, Hash, 
+  Search, X, CheckCircle2, Clock, Inbox, AlertTriangle
+} from 'lucide-react'
 
-const BRINDES_DISPONIVEIS = [
-  'Camiseta Oficial',
-  'Boné',
-  'Caneta Premium',
-  'Mochila',
-  'Garrafa Térmica',
-  'Outro (Especificar)'
+// Mock do catálogo
+const CATALOGO_BRINDES = [
+  {
+    id: 'caneta',
+    nome: 'Caneta Ecológica',
+    descricao: 'Caneta ecológica de bambu de alta qualidade com escrita macia e gravação a laser.',
+    imagem: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&q=80&w=800',
+    premium: true
+  },
+  {
+    id: 'bone',
+    nome: 'Boné Bordado',
+    descricao: 'Boné premium estilo trucker preto com bordado de alta definição em relevo da marca.',
+    imagem: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&q=80&w=800',
+    premium: true
+  },
+  {
+    id: 'camiseta',
+    nome: 'Camiseta Do Mestre',
+    descricao: 'Camisa polo dry-fit azul marinho com alta durabilidade e caimento impecável, ideal para visitas.',
+    imagem: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=800',
+    premium: true
+  },
+  {
+    id: 'caderno',
+    nome: 'Caderno de Anotações',
+    descricao: 'Caderno de anotações luxo com capa de couro marinho/marrom gravado em baixo relevo.',
+    imagem: 'https://images.unsplash.com/photo-1531346878377-a541e4ab0d03?auto=format&fit=crop&q=80&w=800',
+    premium: true
+  },
+  {
+    id: 'copo',
+    nome: 'Copo Térmico',
+    descricao: 'Copo térmico de inox com isolamento a vácuo de dupla parede, tampa antivazamento.',
+    imagem: 'https://images.unsplash.com/photo-1614949392265-7264a4b41315?auto=format&fit=crop&q=80&w=800',
+    premium: true
+  }
 ]
 
 export const SolicitarBrindes: React.FC = () => {
@@ -20,52 +53,51 @@ export const SolicitarBrindes: React.FC = () => {
   const { showToast } = useToast()
   const queryClient = useQueryClient()
 
+  const [activeTab, setActiveTab] = useState('Todos')
+  const [searchTerm, setSearchTerm] = useState('')
+  
+  // Estado do Modal
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedBrinde, setSelectedBrinde] = useState<typeof CATALOGO_BRINDES[0] | null>(null)
+  
+  // Estado do Formulário
   const [empresaId, setEmpresaId] = useState('')
   const [empresaNome, setEmpresaNome] = useState('')
-  const [brinde, setBrinde] = useState('')
-  const [brindeEspecifico, setBrindeEspecifico] = useState('')
   const [quantidade, setQuantidade] = useState(1)
   const [justificativa, setJustificativa] = useState('')
 
-  // Buscar empresas cadastradas
+  // Buscar empresas
   const { data: empresas } = useQuery({
     queryKey: ['empresas-list'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('empresas')
-        .select('id, name')
-        .order('name')
+      const { data, error } = await supabase.from('empresas').select('id, name').order('name')
       if (error) throw error
       return data
     }
   })
 
-  // Buscar histórico de solicitações
-  const { data: solicitacoes, isLoading } = useQuery({
+  // Buscar histórico
+  const { data: solicitacoes = [], isLoading } = useQuery({
     queryKey: ['solicitacoes-brindes', user?.id],
     queryFn: async () => {
-      // Se for admin, pode querer ver todas (opcional), mas vamos filtrar pelo usuário por padrão a menos que especificado
       const { data, error } = await supabase
         .from('solicitacoes_brindes')
         .select('*')
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
-      
       if (error) throw error
       return data
     },
     enabled: !!user?.id
   })
 
-  // Mutação para criar nova solicitação
+  // Mutação de Envio
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!empresaNome) throw new Error('Selecione uma empresa.')
-      if (!brinde) throw new Error('Selecione o brinde.')
+      if (!selectedBrinde) throw new Error('Nenhum brinde selecionado.')
       if (quantidade < 1) throw new Error('Quantidade deve ser pelo menos 1.')
       
-      const brindeFinal = brinde === 'Outro (Especificar)' ? brindeEspecifico : brinde
-
       const { error } = await supabase
         .from('solicitacoes_brindes')
         .insert({
@@ -73,7 +105,7 @@ export const SolicitarBrindes: React.FC = () => {
           requester_name: fullName || user?.email,
           empresa_id: empresaId || null,
           empresa_nome: empresaNome,
-          brinde_tipo: brindeFinal,
+          brinde_tipo: selectedBrinde.nome,
           quantidade: quantidade,
           justificativa: justificativa || 'Nenhuma',
           status: 'Pendente'
@@ -82,13 +114,8 @@ export const SolicitarBrindes: React.FC = () => {
       if (error) throw error
     },
     onSuccess: () => {
-      showToast('Sua solicitação de brindes foi enviada!', 'success')
-      setEmpresaId('')
-      setEmpresaNome('')
-      setBrinde('')
-      setBrindeEspecifico('')
-      setQuantidade(1)
-      setJustificativa('')
+      showToast('Sua solicitação de brindes foi enviada com sucesso!', 'success')
+      closeModal()
       queryClient.invalidateQueries({ queryKey: ['solicitacoes-brindes'] })
     },
     onError: (err: any) => {
@@ -96,127 +123,360 @@ export const SolicitarBrindes: React.FC = () => {
     }
   })
 
+  const handleOpenModal = (brinde: typeof CATALOGO_BRINDES[0]) => {
+    setSelectedBrinde(brinde)
+    setEmpresaId('')
+    setEmpresaNome('')
+    setQuantidade(1)
+    setJustificativa('')
+    setModalOpen(true)
+  }
+
+  const closeModal = () => {
+    setModalOpen(false)
+    setTimeout(() => setSelectedBrinde(null), 300)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     createMutation.mutate()
   }
 
+  // Filtragem
+  const filteredSolicitacoes = useMemo(() => {
+    return solicitacoes.filter(sol => {
+      const s = (sol.status || '').toLowerCase()
+      const t = activeTab.toLowerCase()
+      const matchTab = t === 'todos' || s.includes(t)
+      
+      if (!matchTab) return false
+      
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase()
+        return (
+          (sol.brinde_tipo || '').toLowerCase().includes(search) ||
+          (sol.empresa_nome || '').toLowerCase().includes(search) ||
+          (sol.requester_name || '').toLowerCase().includes(search)
+        )
+      }
+      return true
+    })
+  }, [solicitacoes, activeTab, searchTerm])
+
+  // Estatísticas
+  const stats = useMemo(() => {
+    let total = 0, pendentes = 0, aprovados = 0, entregues = 0
+    solicitacoes.forEach(sol => {
+      total += (sol.quantidade || 1)
+      const s = (sol.status || '').toLowerCase()
+      if (s.includes('pendente') || s.includes('aguardando')) pendentes += (sol.quantidade || 1)
+      if (s.includes('aprovado')) aprovados += (sol.quantidade || 1)
+      if (s.includes('entregue')) entregues += (sol.quantidade || 1)
+    })
+    return { total, pendentes, aprovados, entregues }
+  }, [solicitacoes])
+
+  // Helpers de Cor
   const getStatusColor = (status: string) => {
     const s = (status || '').toLowerCase()
-    if (s.includes('pendente')) return 'bg-gray-100 text-gray-700 border-gray-200'
-    if (s.includes('aprovado')) return 'bg-blue-100 text-blue-700 border-blue-200'
-    if (s.includes('recusado')) return 'bg-red-100 text-red-700 border-red-200'
+    if (s.includes('pendente') || s.includes('aguardando')) return 'bg-amber-100 text-amber-700 border-amber-200'
+    if (s.includes('aprovado')) return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+    if (s.includes('recusado')) return 'bg-rose-100 text-rose-700 border-rose-200'
     if (s.includes('enviado')) return 'bg-purple-100 text-purple-700 border-purple-200'
-    if (s.includes('entregue')) return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+    if (s.includes('entregue')) return 'bg-blue-100 text-blue-700 border-blue-200'
     return 'bg-secondary text-foreground border-border'
   }
-
   const getStatusDot = (status: string) => {
     const s = (status || '').toLowerCase()
-    if (s.includes('pendente')) return 'bg-gray-500'
-    if (s.includes('aprovado')) return 'bg-blue-500'
-    if (s.includes('recusado')) return 'bg-red-500'
+    if (s.includes('pendente') || s.includes('aguardando')) return 'bg-amber-500'
+    if (s.includes('aprovado')) return 'bg-emerald-500'
+    if (s.includes('recusado')) return 'bg-rose-500'
     if (s.includes('enviado')) return 'bg-purple-500'
-    if (s.includes('entregue')) return 'bg-emerald-500'
+    if (s.includes('entregue')) return 'bg-blue-500'
     return 'bg-gray-400'
   }
 
   return (
     <Layout>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        <header className="mb-8 flex items-center gap-4">
-          <div className="h-16 w-16 bg-brand-navy/10 rounded-2xl flex items-center justify-center shrink-0">
-            <Gift className="h-8 w-8 text-brand-navy" />
-          </div>
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* HEADER DA PÁGINA */}
+        <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground font-display">
-              Solicitar Brindes
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-brand-red mb-1">
+              OPERAÇÃO COMERCIAL
+            </p>
+            <h1 className="text-3xl font-black text-brand-navy font-display flex items-center gap-3">
+              <Gift size={28} className="text-brand-navy" />
+              Solicitação de Brindes
             </h1>
-            <p className="mt-1 text-muted-foreground">
-              Solicite materiais para as empresas parceiras.
+            <p className="mt-1 text-sm text-muted-foreground">
+              Solicite brindes promocionais e institucionais para entrega aos clientes em visitas comerciais.
             </p>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-8">
+        {/* CARDS DE ESTATÍSTICAS */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-card border border-border shadow-[var(--shadow-soft)] rounded-2xl p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-brand-navy/10 flex items-center justify-center text-brand-navy shrink-0">
+              <Inbox size={24} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Total Solicitado</p>
+              <p className="text-2xl font-black text-foreground leading-none">{stats.total}</p>
+            </div>
+          </div>
+          <div className="bg-card border border-border shadow-[var(--shadow-soft)] rounded-2xl p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
+              <Clock size={24} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Aguardando</p>
+              <p className="text-2xl font-black text-foreground leading-none">{stats.pendentes}</p>
+            </div>
+          </div>
+          <div className="bg-card border border-border shadow-[var(--shadow-soft)] rounded-2xl p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
+              <CheckCircle2 size={24} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Aprovados</p>
+              <p className="text-2xl font-black text-foreground leading-none">{stats.aprovados}</p>
+            </div>
+          </div>
+          <div className="bg-card border border-border shadow-[var(--shadow-soft)] rounded-2xl p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
+              <Gift size={24} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Entregues</p>
+              <p className="text-2xl font-black text-foreground leading-none">{stats.entregues}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* CATÁLOGO DE PRODUTOS */}
+        <div className="bg-card border border-border shadow-[var(--shadow-soft)] rounded-[32px] p-6 mb-8">
+          <div className="mb-6">
+            <h2 className="text-sm font-black text-brand-red flex items-center gap-2 uppercase tracking-widest">
+              <Package size={16} />
+              Brindes Oficiais Disponíveis
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">
+              Clique em "Solicitar" em qualquer brinde abaixo para preencher o formulário automaticamente.
+            </p>
+          </div>
           
-          {/* Formulário */}
-          <div>
-            <div className="bg-card border border-border shadow-[var(--shadow-soft)] rounded-3xl overflow-hidden sticky top-24">
-              <div className="p-6 border-b border-border bg-secondary/30">
-                <h2 className="font-bold text-foreground flex items-center gap-2">
-                  <Package size={18} className="text-brand-red" />
-                  Nova Solicitação
-                </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            {CATALOGO_BRINDES.map(brinde => (
+              <div key={brinde.id} className="group flex flex-col bg-background border border-border rounded-2xl overflow-hidden hover:border-brand-navy/30 hover:shadow-lg transition-all">
+                <div className="aspect-[4/3] relative overflow-hidden bg-secondary">
+                  <img 
+                    src={brinde.imagem} 
+                    alt={brinde.nome} 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  {brinde.premium && (
+                    <div className="absolute top-2 right-2 bg-amber-400 text-amber-900 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-sm shadow-sm">
+                      Premium
+                    </div>
+                  )}
+                </div>
+                <div className="p-4 flex-1 flex flex-col">
+                  <h3 className="font-bold text-foreground text-sm mb-1 line-clamp-1">{brinde.nome}</h3>
+                  <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed mb-4 flex-1">
+                    {brinde.descricao}
+                  </p>
+                  <button
+                    onClick={() => handleOpenModal(brinde)}
+                    className="w-full h-9 bg-secondary text-brand-navy font-bold text-xs rounded-xl hover:bg-brand-navy hover:text-white transition-colors border border-border/50 shadow-sm"
+                  >
+                    Solicitar
+                  </button>
+                </div>
               </div>
-              <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                
-                {/* Empresa */}
-                <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1">
-                    Empresa <span className="text-brand-red">*</span>
-                  </label>
-                  <div className="relative">
-                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <select
-                      required
-                      value={empresaNome}
-                      onChange={e => {
-                        setEmpresaNome(e.target.value)
-                        const emp = empresas?.find(em => em.name === e.target.value)
-                        setEmpresaId(emp ? emp.id : '')
-                      }}
-                      className="w-full rounded-xl border border-border bg-background pl-11 pr-4 py-3 text-sm focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy transition-colors appearance-none"
-                    >
-                      <option value="">Selecione a empresa...</option>
-                      {empresas?.map(emp => (
-                        <option key={emp.id} value={emp.name}>{emp.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+            ))}
+          </div>
+        </div>
 
-                {/* Brinde */}
-                <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1">
-                    Brinde <span className="text-brand-red">*</span>
-                  </label>
-                  <div className="relative">
-                    <Gift className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <select
-                      required
-                      value={brinde}
-                      onChange={e => setBrinde(e.target.value)}
-                      className="w-full rounded-xl border border-border bg-background pl-11 pr-4 py-3 text-sm focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy transition-colors appearance-none"
-                    >
-                      <option value="">Selecione o brinde...</option>
-                      {BRINDES_DISPONIVEIS.map(b => (
-                        <option key={b} value={b}>{b}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+        {/* FILTROS E BUSCA */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4 bg-card border border-border shadow-[var(--shadow-soft)] rounded-full p-2">
+          <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto px-2">
+            {['Todos', 'Pendentes', 'Aprovados', 'Recusados', 'Entregues'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 text-xs font-bold rounded-full transition-all whitespace-nowrap ${
+                  activeTab === tab 
+                    ? 'bg-brand-navy text-white shadow-md' 
+                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          <div className="relative w-full md:w-72 shrink-0 pr-2 pb-2 md:pb-0">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Buscar brinde ou empresa..."
+              className="w-full h-10 rounded-full border border-border bg-background pl-11 pr-4 text-xs focus:border-brand-navy focus:ring-1 focus:ring-brand-navy transition-colors"
+            />
+          </div>
+        </div>
 
-                {/* Brinde Específico (se 'Outro') */}
-                {brinde === 'Outro (Especificar)' && (
-                  <div>
-                    <label className="block text-sm font-semibold text-foreground mb-1">
-                      Especifique o Brinde <span className="text-brand-red">*</span>
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      value={brindeEspecifico}
-                      onChange={e => setBrindeEspecifico(e.target.value)}
-                      className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy transition-colors"
-                      placeholder="Qual brinde deseja?"
-                    />
-                  </div>
+        {/* TABELA DE HISTÓRICO */}
+        <div className="bg-card border border-border shadow-[var(--shadow-soft)] rounded-[24px] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-secondary/40 text-[10px] uppercase font-black text-muted-foreground border-b border-border tracking-[0.1em]">
+                <tr>
+                  <th className="px-6 py-4">Data</th>
+                  <th className="px-6 py-4">Vendedor</th>
+                  <th className="px-6 py-4">Empresa</th>
+                  <th className="px-6 py-4 text-center">Brinde</th>
+                  <th className="px-6 py-4 text-center">Quantidade</th>
+                  <th className="px-6 py-4">Justificativa</th>
+                  <th className="px-6 py-4 text-center">Status</th>
+                  <th className="px-6 py-4">Obs. Adm</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-16 text-center text-muted-foreground">
+                      <LoaderCircle className="h-6 w-6 animate-spin mx-auto text-brand-red mb-3" />
+                      <p className="font-semibold text-xs uppercase tracking-wider">Carregando dados...</p>
+                    </td>
+                  </tr>
+                ) : filteredSolicitacoes.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-16 text-center text-muted-foreground">
+                      <div className="h-12 w-12 bg-secondary rounded-full flex items-center justify-center mx-auto mb-3 text-muted-foreground/50">
+                        <Inbox size={20} />
+                      </div>
+                      <p className="font-semibold text-sm">Nenhuma solicitação encontrada.</p>
+                      <p className="text-xs mt-1 opacity-70">Ajuste os filtros ou crie uma nova.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSolicitacoes.map((sol) => (
+                    <tr key={sol.id} className="hover:bg-secondary/30 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-foreground text-[11px]">
+                          {new Date(sol.created_at).toLocaleDateString('pt-BR')}
+                        </div>
+                        <div className="text-[10px] font-medium text-muted-foreground">
+                          {new Date(sol.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <User size={13} className="text-muted-foreground" />
+                          <span className="font-semibold text-xs text-foreground/90">{sol.requester_name || sol.promotor_name || 'Vendedor'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 font-bold text-xs">
+                          <Building2 size={13} className="text-brand-navy opacity-70" />
+                          {sol.empresa_nome || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="inline-flex items-center justify-center h-8 w-8 rounded-xl bg-secondary border border-border group-hover:border-brand-navy/20 group-hover:bg-brand-navy/5 transition-colors">
+                          <Gift size={14} className="text-brand-navy/70" />
+                        </div>
+                        <div className="text-[10px] font-bold mt-1.5 max-w-[120px] truncate mx-auto text-foreground/80" title={sol.brinde_tipo}>
+                          {sol.brinde_tipo || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center font-black text-sm text-foreground">
+                        {sol.quantidade || 1}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-muted-foreground font-medium text-[11px] max-w-[150px] block truncate" title={sol.justificativa}>
+                          {sol.justificativa || 'Nenhuma'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${getStatusColor(sol.status)}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(sol.status)} shadow-sm`}></span>
+                          {sol.status || 'PENDENTE'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-muted-foreground/60 font-medium text-[11px] max-w-[150px] block truncate" title={sol.observacao_admin}>
+                          {sol.observacao_admin || '---'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
                 )}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-                {/* Quantidade */}
+      </div>
+
+      {/* MODAL DE SOLICITAÇÃO FLUTUANTE */}
+      {modalOpen && selectedBrinde && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-lg bg-card border border-border rounded-[32px] shadow-2xl overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
+            
+            <button onClick={closeModal} className="absolute top-5 right-5 h-8 w-8 rounded-full bg-secondary text-muted-foreground hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center transition-colors z-10">
+              <X size={16} />
+            </button>
+
+            <div className="h-32 relative overflow-hidden bg-brand-navy">
+              <img src={selectedBrinde.imagem} alt="Brinde" className="w-full h-full object-cover opacity-40 mix-blend-luminosity" />
+              <div className="absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/60 to-transparent"></div>
+              <div className="absolute bottom-5 left-6">
+                <p className="text-[10px] font-black text-brand-red uppercase tracking-wider mb-1">NOVA SOLICITAÇÃO</p>
+                <h2 className="text-2xl font-bold text-white font-display leading-none">{selectedBrinde.nome}</h2>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              
+              <div className="bg-amber-50 border border-amber-200/50 rounded-xl p-3 flex items-start gap-3">
+                <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
+                  As solicitações estão sujeitas à aprovação da diretoria e disponibilidade em estoque. Certifique-se de preencher a justificativa caso a quantidade seja alta.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-foreground mb-1.5 uppercase tracking-wider">
+                  Empresa Destino <span className="text-brand-red">*</span>
+                </label>
+                <div className="relative">
+                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <select
+                    required
+                    value={empresaNome}
+                    onChange={e => {
+                      setEmpresaNome(e.target.value)
+                      const emp = empresas?.find(em => em.name === e.target.value)
+                      setEmpresaId(emp ? emp.id : '')
+                    }}
+                    className="w-full rounded-xl border border-border bg-background pl-11 pr-4 py-3 text-xs font-medium focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy transition-colors appearance-none"
+                  >
+                    <option value="">Selecione a empresa do cliente...</option>
+                    {empresas?.map(emp => (
+                      <option key={emp.id} value={emp.name}>{emp.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1">
+                  <label className="block text-[11px] font-bold text-foreground mb-1.5 uppercase tracking-wider">
                     Quantidade <span className="text-brand-red">*</span>
                   </label>
                   <div className="relative">
@@ -227,139 +487,56 @@ export const SolicitarBrindes: React.FC = () => {
                       min="1"
                       value={quantidade}
                       onChange={e => setQuantidade(parseInt(e.target.value) || 1)}
-                      className="w-full rounded-xl border border-border bg-background pl-11 pr-4 py-3 text-sm focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy transition-colors"
+                      className="w-full rounded-xl border border-border bg-background pl-11 pr-4 py-3 text-xs font-bold focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy transition-colors"
                     />
                   </div>
                 </div>
-
-                {/* Justificativa */}
                 <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1">
-                    Justificativa
+                  <label className="block text-[11px] font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">
+                    Status Inicial
                   </label>
-                  <div className="relative">
-                    <AlignLeft className="absolute left-4 top-[14px] h-4 w-4 text-muted-foreground" />
-                    <textarea
-                      value={justificativa}
-                      onChange={e => setJustificativa(e.target.value)}
-                      className="w-full rounded-xl border border-border bg-background pl-11 pr-4 py-3 text-sm focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy transition-colors min-h-[80px] resize-y"
-                      placeholder="Motivo da solicitação..."
-                    />
+                  <div className="w-full rounded-xl border border-dashed border-border bg-secondary/50 px-4 py-3 text-xs font-bold text-amber-600 flex items-center gap-2 opacity-80 cursor-not-allowed">
+                    <Clock size={14} /> Aguardando
                   </div>
                 </div>
+              </div>
 
+              <div>
+                <label className="block text-[11px] font-bold text-foreground mb-1.5 uppercase tracking-wider">
+                  Justificativa (Opcional)
+                </label>
+                <div className="relative">
+                  <AlignLeft className="absolute left-4 top-[14px] h-4 w-4 text-muted-foreground" />
+                  <textarea
+                    value={justificativa}
+                    onChange={e => setJustificativa(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background pl-11 pr-4 py-3 text-xs font-medium focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy transition-colors min-h-[80px] resize-y"
+                    placeholder="Motivo da solicitação para aprovação rápida..."
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={createMutation.isPending}
-                  className="w-full h-12 bg-brand-navy text-primary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-brand-red transition-all shadow-md active:scale-95 disabled:opacity-70 disabled:pointer-events-none mt-4"
+                  className="w-full h-12 bg-brand-navy text-white font-black text-sm rounded-xl flex items-center justify-center gap-2 hover:bg-brand-navy/90 hover:scale-[1.01] transition-all shadow-lg shadow-brand-navy/20 active:scale-95 disabled:opacity-70 disabled:pointer-events-none"
                 >
                   {createMutation.isPending ? (
                     <LoaderCircle size={18} className="animate-spin" />
                   ) : (
                     <>
-                      Enviar Solicitação
-                      <Send size={18} />
+                      Confirmar Solicitação
+                      <Send size={16} />
                     </>
                   )}
                 </button>
-              </form>
-            </div>
-          </div>
-
-          {/* Histórico Tabela */}
-          <div className="overflow-hidden">
-            <div className="bg-card border border-border shadow-[var(--shadow-soft)] rounded-3xl overflow-hidden h-full">
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm whitespace-nowrap">
-                  <thead className="bg-secondary/40 text-xs uppercase font-bold text-muted-foreground border-b border-border tracking-wider">
-                    <tr>
-                      <th className="px-6 py-4">Data</th>
-                      <th className="px-6 py-4">Vendedor</th>
-                      <th className="px-6 py-4">Empresa</th>
-                      <th className="px-6 py-4 text-center">Brinde</th>
-                      <th className="px-6 py-4 text-center">Quantidade</th>
-                      <th className="px-6 py-4">Justificativa</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Obs. Adm</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
-                          <LoaderCircle className="h-6 w-6 animate-spin mx-auto text-brand-red mb-2" />
-                          Carregando dados...
-                        </td>
-                      </tr>
-                    ) : !solicitacoes || solicitacoes.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
-                          Nenhuma solicitação encontrada.
-                        </td>
-                      </tr>
-                    ) : (
-                      solicitacoes.map((sol) => (
-                        <tr key={sol.id} className="hover:bg-secondary/20 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="font-semibold text-foreground text-xs">
-                              {new Date(sol.created_at).toLocaleDateString('pt-BR')}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground">
-                              {new Date(sol.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <User size={14} className="text-muted-foreground" />
-                              <span className="font-medium">{sol.requester_name || sol.promotor_name || 'Vendedor'}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2 font-medium">
-                              <Building2 size={14} className="text-brand-navy" />
-                              {sol.empresa_nome || '-'}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <div className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-secondary border border-border">
-                              <Gift size={16} className="text-brand-red" />
-                            </div>
-                            <div className="text-[11px] font-semibold mt-1 max-w-[120px] truncate mx-auto" title={sol.brinde_tipo}>
-                              {sol.brinde_tipo || '-'}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-center font-bold text-base">
-                            {sol.quantidade || 1}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-muted-foreground italic text-xs max-w-[150px] block truncate" title={sol.justificativa}>
-                              {sol.justificativa || 'Nenhuma'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(sol.status)}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(sol.status)}`}></span>
-                              {sol.status || 'PENDENTE'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-muted-foreground text-xs max-w-[150px] block truncate" title={sol.observacao_admin}>
-                              {sol.observacao_admin || '---'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
               </div>
 
-            </div>
+            </form>
           </div>
-
         </div>
-      </div>
+      )}
     </Layout>
   )
 }
