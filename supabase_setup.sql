@@ -1,5 +1,5 @@
 -- =========================================================================
--- SCRIPT UNIFICADO DE BANCO DE DADOS E SEGURANÇA - PRODUTOS DO MESTRE (V3)
+-- SCRIPT UNIFICADO DE BANCO DE DADOS E SEGURANÇA - PRODUTOS DO MESTRE (V4)
 -- =========================================================================
 -- Database: PostgreSQL (Supabase)
 -- Instruções: Copie todo o código abaixo, acesse o painel do Supabase,
@@ -71,13 +71,17 @@ CREATE TABLE public.materiais (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Empresas Parceiras / Clientes
+-- Empresas Parceiras / Clientes (Completamente alinhada com as colunas do Dashboard)
 CREATE TABLE public.empresas (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     name text UNIQUE NOT NULL,
+    codigo text,
     cnpj text,
-    contato text,
+    responsavel text,
+    contato text, -- Mantido para retrocompatibilidade
     telefone text,
+    endereco text,
+    status text DEFAULT 'ativo' CHECK (status IN ('ativo', 'inativo')),
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -137,18 +141,26 @@ CREATE TABLE public.configuracoes (
     updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Solicitações de Brindes e Campanhas
+-- Solicitações de Brindes (Híbrida: Atende ao promotor mestre-SaaS e ao dashboard-mestre)
 CREATE TABLE public.solicitacoes_brindes (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+    requester_name text,
     email text,
     promotor_name text,
-    itens_solicitados text NOT NULL,
-    endereco_entrega text,
-    status text DEFAULT 'Pendente' NOT NULL CHECK (status IN ('Pendente', 'Aprovado', 'Enviado', 'Entregue', 'Cancelado')),
-    observacoes text,
+    empresa_id uuid REFERENCES public.empresas(id) ON DELETE SET NULL,
+    empresa_nome text,
+    brinde_tipo text,
+    quantidade integer DEFAULT 1,
+    justificativa text,
+    observacao_admin text,
+    itens_solicitados text, -- Coluna antiga do promotor
+    endereco_entrega text,   -- Coluna antiga do promotor
+    observacoes text,        -- Coluna antiga do promotor
+    status text DEFAULT 'Pendente' NOT NULL, -- Valores híbridos: Pendente, Aprovado, pendente, aprovado, etc.
     created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- Logs de Acesso ao Sistema
@@ -728,4 +740,4 @@ BEGIN
 END;
 $$;
 
--- FIM DO SCRIPT UNIFICADO V3
+-- FIM DO SCRIPT UNIFICADO V4
