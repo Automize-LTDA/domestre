@@ -441,12 +441,13 @@ export const SolicitarBrindes: React.FC = () => {
 
             {/* Cabeçalho do Modal (Com ou Sem Imagem dependendo da Origem) */}
             {selectedBrindeObj ? (
-              <div className="h-32 relative overflow-hidden bg-brand-navy">
-                <img src={selectedBrindeObj.imagem} alt="Brinde" className="w-full h-full object-cover opacity-40 mix-blend-luminosity" />
-                <div className="absolute inset-0 bg-gradient-to-t from-brand-navy via-brand-navy/60 to-transparent"></div>
-                <div className="absolute bottom-5 left-6">
+              <div className="h-28 relative overflow-hidden bg-brand-navy/5 flex items-center px-6 border-b border-border">
+                <div>
                   <p className="text-[10px] font-black text-brand-red uppercase tracking-wider mb-1">NOVA SOLICITAÇÃO</p>
-                  <h2 className="text-2xl font-bold text-white font-display leading-none">{selectedBrindeObj.nome}</h2>
+                  <h2 className="text-xl font-black text-brand-navy font-display flex items-center gap-2">
+                    <Gift size={22} className="text-brand-navy" />
+                    {selectedBrindeObj.nome}
+                  </h2>
                 </div>
               </div>
             ) : (
