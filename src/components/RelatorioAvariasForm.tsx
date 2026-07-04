@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { generateReportPDF } from '../utils/pdfGenerator'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -11,7 +12,8 @@ import {
   Circle,
   AlertTriangle,
   PartyPopper,
-  ClipboardList
+  ClipboardList,
+  FileDown
 } from 'lucide-react'
 
 // Material list
@@ -146,14 +148,38 @@ function SuccessOverlay({ report, onNew }: { report: ReportData; onNew: () => vo
           </div>
         </div>
 
-        <button
-          onClick={onNew}
-          style={{ backgroundImage: 'var(--gradient-accent)' }}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold text-brand-red-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02] active:scale-[0.99] transition-transform"
-        >
-          <ClipboardList size={16} />
-          Registrar Nova Avaria
-        </button>
+        <div className="w-full flex gap-3 mt-2">
+          <button
+            onClick={() => {
+              generateReportPDF({
+                numero: report.numero,
+                empresa: report.empresa || '',
+                responsavel: report.responsavel || '',
+                data: new Date().toISOString(),
+                situacao: 'Registrado via App',
+                observacoes: report.observacoes || '',
+                totalItens: totalQtd,
+                itens: report.itens.map(i => ({
+                  material: i.material,
+                  quantidade: i.quantidade,
+                  tipoAvaria: i.tipoAvaria || ''
+                }))
+              })
+            }}
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3.5 text-sm font-bold text-brand-navy border border-border shadow-sm hover:bg-brand-navy hover:text-white transition-colors"
+          >
+            <FileDown size={16} />
+            Gerar PDF
+          </button>
+          <button
+            onClick={onNew}
+            style={{ backgroundImage: 'var(--gradient-accent)' }}
+            className="flex-[1.5] inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold text-brand-red-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02] active:scale-[0.99] transition-transform"
+          >
+            <ClipboardList size={16} />
+            Nova Avaria
+          </button>
+        </div>
       </div>
     </div>
   )
