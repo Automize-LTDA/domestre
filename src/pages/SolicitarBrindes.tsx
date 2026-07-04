@@ -64,7 +64,7 @@ export const SolicitarBrindes: React.FC = () => {
   const [empresaId, setEmpresaId] = useState('')
   const [empresaNome, setEmpresaNome] = useState('')
   const [brindeManual, setBrindeManual] = useState('')
-  const [quantidade, setQuantidade] = useState(1)
+  const [quantidade, setQuantidade] = useState<number | ''>(1)
   const [justificativa, setJustificativa] = useState('')
 
   // Buscar empresas
@@ -99,7 +99,7 @@ export const SolicitarBrindes: React.FC = () => {
       
       const brindeFinal = selectedBrindeObj ? selectedBrindeObj.nome : brindeManual
       if (!brindeFinal) throw new Error('Selecione um brinde.')
-      if (quantidade < 1) throw new Error('Quantidade deve ser pelo menos 1.')
+      if (quantidade === '' || quantidade < 1) throw new Error('Quantidade deve ser pelo menos 1.')
       
       const { error } = await supabase
         .from('solicitacoes_brindes')
@@ -549,7 +549,7 @@ export const SolicitarBrindes: React.FC = () => {
                       type="number"
                       min="1"
                       value={quantidade}
-                      onChange={e => setQuantidade(parseInt(e.target.value) || 1)}
+                      onChange={e => setQuantidade(e.target.value === '' ? '' : parseInt(e.target.value))}
                       className="w-full rounded-xl border border-border bg-background pl-11 pr-4 py-3 text-xs font-bold focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy transition-colors"
                     />
                   </div>
