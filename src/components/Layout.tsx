@@ -14,8 +14,7 @@ import {
   MapPin,
   Smartphone,
   Gift,
-  Bell,
-  BellOff
+  Bell
 } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
 
@@ -66,7 +65,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
         const { data, error } = await supabase
           .from('notificacoes')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', user?.id)
           .order('created_at', { ascending: false })
           .limit(10)
 
@@ -108,7 +107,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
       const { error } = await supabase
         .from('notificacoes')
         .update({ lida: true })
-        .eq('user_id', user.id)
+        .eq('user_id', user?.id)
         .eq('lida', false)
 
       if (!error) {
@@ -348,6 +347,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
               </button>
             </div>
           </div>
+        </div>
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
