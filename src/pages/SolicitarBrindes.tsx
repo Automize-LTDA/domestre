@@ -187,19 +187,15 @@ export const SolicitarBrindes: React.FC = () => {
   const getStatusColor = (status: string) => {
     const s = (status || '').toLowerCase()
     if (s.includes('pendente') || s.includes('aguardando')) return 'bg-amber-100 text-amber-700 border-amber-200'
-    if (s.includes('aprovado')) return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+    if (s.includes('aprovado') || s.includes('enviado') || s.includes('entregue')) return 'bg-emerald-100 text-emerald-700 border-emerald-200'
     if (s.includes('recusado')) return 'bg-rose-100 text-rose-700 border-rose-200'
-    if (s.includes('enviado')) return 'bg-purple-100 text-purple-700 border-purple-200'
-    if (s.includes('entregue')) return 'bg-blue-100 text-blue-700 border-blue-200'
     return 'bg-secondary text-foreground border-border'
   }
   const getStatusDot = (status: string) => {
     const s = (status || '').toLowerCase()
     if (s.includes('pendente') || s.includes('aguardando')) return 'bg-amber-500'
-    if (s.includes('aprovado')) return 'bg-emerald-500'
+    if (s.includes('aprovado') || s.includes('enviado') || s.includes('entregue')) return 'bg-emerald-500'
     if (s.includes('recusado')) return 'bg-rose-500'
-    if (s.includes('enviado')) return 'bg-purple-500'
-    if (s.includes('entregue')) return 'bg-blue-500'
     return 'bg-gray-400'
   }
 
@@ -420,7 +416,10 @@ export const SolicitarBrindes: React.FC = () => {
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${getStatusColor(sol.status)}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(sol.status)} shadow-sm`}></span>
-                          {sol.status || 'PENDENTE'}
+                          {sol.status === 'pendente' ? 'PENDENTE' : 
+                           (sol.status === 'enviado' || sol.status === 'aprovado' || sol.status === 'entregue') ? 'ENTREGUE' : 
+                           sol.status === 'recusado' ? 'RECUSADO' : 
+                           (sol.status || 'PENDENTE').toUpperCase()}
                         </span>
                       </td>
                       <td className="px-6 py-4">
