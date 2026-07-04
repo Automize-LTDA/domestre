@@ -1,5 +1,5 @@
 -- =========================================================================
--- SCRIPT UNIFICADO DE BANCO DE DADOS E SEGURANÇA - PRODUTOS DO MESTRE (V5)
+-- SCRIPT UNIFICADO DE BANCO DE DADOS E SEGURANÇA - PRODUTOS DO MESTRE (V6)
 -- =========================================================================
 -- Database: PostgreSQL (Supabase)
 -- Instruções: Copie todo o código abaixo, acesse o painel do Supabase,
@@ -173,9 +173,10 @@ CREATE TABLE public.logs_acesso (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Notificações e Alertas do Dashboard
+-- Notificações e Alertas do Dashboard (Com coluna de user_id vinculada)
 CREATE TABLE public.notificacoes (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
     titulo text NOT NULL,
     mensagem text NOT NULL,
     tipo text DEFAULT 'info' NOT NULL CHECK (tipo IN ('info', 'sucesso', 'alerta', 'erro')),
@@ -590,7 +591,7 @@ CREATE POLICY "Leitura de logs apenas para gestores e anon" ON public.logs_acess
 
 -- Notificações
 CREATE POLICY "Leitura de notificações para autenticados e anon" ON public.notificacoes
-    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+    FOR SELECT USING (user_id IS NULL OR user_id = auth.uid() OR auth.role() = 'anon');
 CREATE POLICY "Inserção de notificações para autenticados e anon" ON public.notificacoes
     FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Modificação de notificações apenas para gestores" ON public.notificacoes
@@ -740,4 +741,4 @@ BEGIN
 END;
 $$;
 
--- FIM DO SCRIPT UNIFICADO V5
+-- FIM DO SCRIPT UNIFICADO V6

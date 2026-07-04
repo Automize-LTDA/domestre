@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../supabaseClient'
 import { 
   LogOut, 
   Menu, 
@@ -12,7 +13,9 @@ import {
   ClipboardList,
   MapPin,
   Smartphone,
-  Gift
+  Gift,
+  Bell,
+  BellOff
 } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
 
@@ -41,6 +44,81 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
   const { user, role, fullName, loading, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+
+  interface NotificationItem {
+    id: string
+    titulo: string
+    mensagem: string
+    tipo: 'info' | 'sucesso' | 'alerta' | 'erro'
+    lida: boolean
+    created_at: string
+  }
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (!user) return
+
+    async function fetchNotifications() {
+      try {
+        const { data, error } = await supabase
+          .from('notificacoes')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(10)
+
+        if (!error && data) {
+          setNotifications(data as NotificationItem[])
+          setUnreadCount(data.filter(n => !n.lida).length)
+        }
+      } catch (err) {
+        console.error('Erro ao buscar notificações:', err)
+      }
+    }
+
+    fetchNotifications()
+    const interval = setInterval(fetchNotifications, 15000)
+    return () => clearInterval(interval)
+  }, [user])
+
+  async function handleMarkAsRead(id: string) {
+    try {
+      const { error } = await supabase
+        .from('notificacoes')
+        .update({ lida: true })
+        .eq('id', id)
+
+      if (!error) {
+        setNotifications(prev =>
+          prev.map(n => (n.id === id ? { ...n, lida: true } : n))
+        )
+        setUnreadCount(prev => Math.max(0, prev - 1))
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  async function handleMarkAllAsRead() {
+    if (!user) return
+    try {
+      const { error } = await supabase
+        .from('notificacoes')
+        .update({ lida: true })
+        .eq('user_id', user.id)
+        .eq('lida', false)
+
+      if (!error) {
+        setNotifications(prev => prev.map(n => ({ ...n, lida: true })))
+        setUnreadCount(0)
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
   useEffect(() => {
     if (!loading) {
@@ -111,6 +189,71 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
                     {role === 'admin' ? 'Administrador' : role === 'promotor' ? 'Promotor' : 'Comum'}
                   </div>
                 </div>
+
+                {/* Notification Bell Dropdown Button */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="relative h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border text-foreground hover:bg-secondary transition-colors"
+                  >
+                    <Bell size={16} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 w-4 bg-brand-red text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Dropdown menu */}
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-fade-in">
+                      <div className="p-3 border-b border-border bg-secondary/30 flex items-center justify-between">
+                        <span className="text-xs font-bold text-foreground">Notificações</span>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={handleMarkAllAsRead}
+                            className="text-[10px] text-brand-red hover:underline font-semibold"
+                          >
+                            Ler todas
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-60 overflow-y-auto divide-y divide-border">
+                        {notifications.length === 0 ? (
+                          <div className="p-6 text-center text-xs text-muted-foreground">
+                            Nenhuma notificação encontrada.
+                          </div>
+                        ) : (
+                          notifications.map(notif => (
+                            <div
+                              key={notif.id}
+                              onClick={() => handleMarkAsRead(notif.id)}
+                              className={`p-3 text-left transition-colors cursor-pointer ${
+                                notif.lida ? 'opacity-70 bg-card' : 'bg-secondary/40 hover:bg-secondary/70'
+                              }`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${
+                                  notif.tipo === 'sucesso' ? 'bg-emerald-500' :
+                                  notif.tipo === 'erro' ? 'bg-rose-500' :
+                                  notif.tipo === 'alerta' ? 'bg-amber-500' : 'bg-blue-500'
+                                }`} />
+                                <div className="space-y-0.5">
+                                  <p className="text-xs font-bold text-foreground">{notif.titulo}</p>
+                                  <p className="text-[11px] text-muted-foreground">{notif.mensagem}</p>
+                                  <p className="text-[9px] text-slate-400">
+                                    {new Date(notif.created_at).toLocaleDateString('pt-BR')} {new Date(notif.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={() => signOut()}
                   title="Sair"
@@ -129,16 +272,82 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
               <img src={logoUrl} alt="Produtos Do Mestre" className="h-9 w-auto object-contain rounded-md" />
             </Link>
             
-            {/* Menu button on the right */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Abrir menu"
-              className="p-2 rounded-lg text-brand-navy dark:text-foreground hover:bg-secondary hover:text-brand-red transition-colors"
-            >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            {/* Notification and Menu actions */}
+            <div className="flex items-center gap-1">
+              {/* Notification Bell */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-2 rounded-lg text-brand-navy dark:text-foreground hover:bg-secondary transition-colors"
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 h-4 w-4 bg-brand-red text-white text-[8px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Mobile Notification Dropdown */}
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-72 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-fade-in">
+                    <div className="p-3 border-b border-border bg-secondary/30 flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground">Notificações</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllAsRead}
+                          className="text-[9px] text-brand-red hover:underline font-semibold"
+                        >
+                          Ler todas
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-52 overflow-y-auto divide-y divide-border">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-xs text-muted-foreground">
+                          Nenhuma notificação encontrada.
+                        </div>
+                      ) : (
+                        notifications.map(notif => (
+                          <div
+                            key={notif.id}
+                            onClick={() => {
+                              handleMarkAsRead(notif.id)
+                              setShowNotifications(false)
+                            }}
+                            className={`p-3 text-left transition-colors cursor-pointer ${
+                              notif.lida ? 'opacity-70 bg-card' : 'bg-secondary/40'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2">
+                              <div className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${
+                                notif.tipo === 'sucesso' ? 'bg-emerald-500' :
+                                notif.tipo === 'erro' ? 'bg-rose-500' :
+                                notif.tipo === 'alerta' ? 'bg-amber-500' : 'bg-blue-500'
+                              }`} />
+                              <div className="space-y-0.5">
+                                <p className="text-[11px] font-bold text-foreground">{notif.titulo}</p>
+                                <p className="text-[10px] text-muted-foreground">{notif.mensagem}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Menu Button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Abrir menu"
+                className="p-2 rounded-lg text-brand-navy dark:text-foreground hover:bg-secondary hover:text-brand-red transition-colors"
+              >
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
-        </div>
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
