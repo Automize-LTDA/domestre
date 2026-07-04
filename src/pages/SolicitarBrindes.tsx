@@ -9,41 +9,39 @@ import {
   Search, X, CheckCircle2, Clock, Inbox, AlertTriangle, Plus
 } from 'lucide-react'
 
+import canetaImg from '../assets/brinde_caneta.png'
+import boneImg from '../assets/bone-mestre.png'
+import cadernoImg from '../assets/brinde_caderneta.png'
+import chaveiroImg from '../assets/brinde_chaveiro.png'
+
 // Mock do catálogo
 const CATALOGO_BRINDES = [
   {
     id: 'caneta',
     nome: 'Caneta Ecológica',
-    descricao: 'Caneta ecológica de bambu de alta qualidade com escrita macia e gravação a laser.',
-    imagem: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&q=80&w=800',
+    descricao: 'Caneta de metal de alta qualidade com escrita macia e gravação da marca Do Mestre.',
+    imagem: canetaImg,
     premium: true
   },
   {
     id: 'bone',
     nome: 'Boné Bordado',
-    descricao: 'Boné premium estilo trucker preto com bordado de alta definição em relevo da marca.',
-    imagem: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&q=80&w=800',
-    premium: true
-  },
-  {
-    id: 'camiseta',
-    nome: 'Camiseta Do Mestre',
-    descricao: 'Camisa polo dry-fit azul marinho com alta durabilidade e caimento impecável, ideal para visitas.',
-    imagem: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=800',
+    descricao: 'Boné premium estilo trucker preto com mascote bordado de alta definição da marca Do Mestre.',
+    imagem: boneImg,
     premium: true
   },
   {
     id: 'caderno',
-    nome: 'Caderno de Anotações',
-    descricao: 'Caderno de anotações luxo com capa de couro marinho/marrom gravado em baixo relevo.',
-    imagem: 'https://images.unsplash.com/photo-1531346878377-a541e4ab0d03?auto=format&fit=crop&q=80&w=800',
+    nome: 'Caderneta Do Mestre',
+    descricao: 'Caderneta de anotações estilo moleskine preto com mascote da marca Do Mestre impresso.',
+    imagem: cadernoImg,
     premium: true
   },
   {
-    id: 'copo',
-    nome: 'Copo Térmico',
-    descricao: 'Copo térmico de inox com isolamento a vácuo de dupla parede, tampa antivazamento.',
-    imagem: 'https://images.unsplash.com/photo-1614949392265-7264a4b41315?auto=format&fit=crop&q=80&w=800',
+    id: 'chaveiro',
+    nome: 'Chaveiro Abridor',
+    descricao: 'Chaveiro de metal com acabamento escovado e logotipo do mascote Do Mestre.',
+    imagem: chaveiroImg,
     premium: true
   }
 ]
