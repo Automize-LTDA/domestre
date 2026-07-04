@@ -501,3 +501,34 @@ CREATE POLICY "Anyone authenticated can view configurations" ON public.configura
     FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
 CREATE POLICY "Only admin can manage configurations" ON public.configuracoes
     FOR ALL USING (public.get_user_role(auth.uid()) = 'admin' OR auth.role() = 'anon');
+
+-- 11. SOLICITAÇÕES DE BRINDES
+DROP TABLE IF EXISTS public.solicitacoes_brindes CASCADE;
+CREATE TABLE public.solicitacoes_brindes (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    itens_solicitados text NOT NULL,
+    endereco_entrega text,
+    status text DEFAULT 'Pendente' NOT NULL CHECK (status IN ('Pendente', 'Aprovado', 'Enviado', 'Entregue', 'Cancelado')),
+    observacoes text,
+    created_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.solicitacoes_brindes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone authenticated can view solicitacoes_brindes" ON public.solicitacoes_brindes
+    FOR SELECT USING (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Anyone authenticated can insert solicitacoes_brindes" ON public.solicitacoes_brindes
+    FOR INSERT WITH CHECK (auth.role() IN ('authenticated', 'anon'));
+CREATE POLICY "Admin or creator can delete solicitacoes_brindes" ON public.solicitacoes_brindes
+    FOR DELETE USING (
+        created_by = auth.uid() OR
+        created_by IS NULL OR
+        public.get_user_role(auth.uid()) = 'admin' OR
+        auth.role() = 'anon'
+    );
+CREATE POLICY "Admin can update solicitacoes_brindes" ON public.solicitacoes_brindes
+    FOR UPDATE USING (
+        public.get_user_role(auth.uid()) = 'admin' OR 
+        auth.role() = 'anon'
+    );

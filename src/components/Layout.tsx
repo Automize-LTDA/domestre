@@ -11,7 +11,8 @@ import {
   History,
   ClipboardList,
   MapPin,
-  Smartphone
+  Smartphone,
+  Gift
 } from 'lucide-react'
 import logoUrl from '../assets/logo.png'
 
@@ -31,6 +32,7 @@ const navLinks: NavLinkItem[] = [
   { to: '/novo', label: 'Novo Relatório', icon: ClipboardList },
   { to: '/relatorios', label: 'Relatórios Gerados', icon: History },
   { to: '/visitas/novo', label: 'Visita a Filiais', icon: MapPin },
+  { to: '/brindes', label: 'Solicitar Brindes', icon: Gift },
   { to: '/instalar', label: 'Instalar App', icon: Smartphone }
 ]
 
