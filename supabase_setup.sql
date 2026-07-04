@@ -1,5 +1,5 @@
 -- =========================================================================
--- SCRIPT UNIFICADO DE BANCO DE DADOS E SEGURANÇA - PRODUTOS DO MESTRE (V2)
+-- SCRIPT UNIFICADO DE BANCO DE DADOS E SEGURANÇA - PRODUTOS DO MESTRE (V3)
 -- =========================================================================
 -- Database: PostgreSQL (Supabase)
 -- Instruções: Copie todo o código abaixo, acesse o painel do Supabase,
@@ -50,6 +50,7 @@ CREATE TABLE public.usuarios (
     cargo text NOT NULL CHECK (cargo IN ('admin', 'gestor', 'sup_tecnico', 'tecnico', 'funcionario', 'cliente', 'vendedor')),
     status text DEFAULT 'ativo' NOT NULL CHECK (status IN ('ativo', 'bloqueado')),
     empresa text DEFAULT 'Do Mestre',
+    telefone text,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -232,13 +233,14 @@ BEGIN
     VALUES (NEW.id, default_role)
     ON CONFLICT (user_id, role) DO NOTHING;
 
-    INSERT INTO public.usuarios (id, email, cargo, status, empresa)
+    INSERT INTO public.usuarios (id, email, cargo, status, empresa, telefone)
     VALUES (
         NEW.id,
         NEW.email,
         default_cargo,
         'ativo',
-        'Do Mestre'
+        'Do Mestre',
+        NULL
     )
     ON CONFLICT (id) DO NOTHING;
 
@@ -671,8 +673,8 @@ BEGIN
     DELETE FROM public.user_roles WHERE user_id = _target_user_id;
     INSERT INTO public.user_roles (user_id, role) VALUES (_target_user_id, 'admin');
 
-    INSERT INTO public.usuarios (id, email, cargo, status, empresa)
-    VALUES (_target_user_id, _email, 'admin', 'ativo', 'Do Mestre')
+    INSERT INTO public.usuarios (id, email, cargo, status, empresa, telefone)
+    VALUES (_target_user_id, _email, 'admin', 'ativo', 'Do Mestre', NULL)
     ON CONFLICT (id) DO UPDATE SET email = _email, cargo = 'admin', status = 'ativo', empresa = 'Do Mestre';
 
 END;
@@ -680,9 +682,6 @@ $$;
 
 -- -------------------------------------------------------------------------
 -- 8. SINCRONIZAR TODOS OS USUÁRIOS DO AUTH.USERS PARA TABELAS PÚBLICAS
--- -------------------------------------------------------------------------
--- Esse bloco percorre os usuários já criados na aba Authentication do console
--- e garante que eles tenham registros nos perfis públicos.
 -- -------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -715,17 +714,18 @@ BEGIN
         ON CONFLICT (user_id, role) DO NOTHING;
 
         -- Insere no usuarios
-        INSERT INTO public.usuarios (id, email, cargo, status, empresa)
+        INSERT INTO public.usuarios (id, email, cargo, status, empresa, telefone)
         VALUES (
             usr.id,
             usr.email,
             default_cargo,
             'ativo',
-            'Do Mestre'
+            'Do Mestre',
+            NULL
         )
         ON CONFLICT (id) DO UPDATE SET email = usr.email;
     END LOOP;
 END;
 $$;
 
--- FIM DO SCRIPT UNIFICADO V2
+-- FIM DO SCRIPT UNIFICADO V3
