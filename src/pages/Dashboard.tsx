@@ -21,7 +21,6 @@ import {
 export const Dashboard: React.FC = () => {
   const { role, user } = useAuth()
   const [showInstallBanner, setShowInstallBanner] = React.useState(false)
-  const [reminderDismissed, setReminderDismissed] = React.useState(false)
   const [testOverrideState, setTestOverrideState] = React.useState<'soft' | 'urgent' | 'success' | null>(null)
 
   React.useEffect(() => {
@@ -29,11 +28,6 @@ export const Dashboard: React.FC = () => {
     const isDismissed = localStorage.getItem('domestre.install_banner_dismissed') === 'true'
     if (!isStandalone && !isDismissed) {
       setShowInstallBanner(true)
-    }
-
-    const reminderDismissedUntil = localStorage.getItem('domestre.reminder_dismissed_until')
-    if (reminderDismissedUntil && new Date(reminderDismissedUntil) > new Date()) {
-      setReminderDismissed(true)
     }
   }, [])
 
@@ -66,7 +60,7 @@ export const Dashboard: React.FC = () => {
   // ── Promoter activity check ────────────────────────────────────────────────
   const { data: promoterActivity } = useQuery({
     queryKey: ['promoter-activity', user?.id],
-    enabled: role === 'promotor' && !!user?.id && !reminderDismissed,
+    enabled: role === 'promotor' && !!user?.id,
     queryFn: async () => {
       const isMock = user?.id === '00000000-0000-0000-0000-000000000000'
       if (isMock) return { lastVisitDate: null, visitedToday: false, daysSinceLastVisit: null }
@@ -100,22 +94,16 @@ export const Dashboard: React.FC = () => {
     refetchOnWindowFocus: false
   })
 
-  function dismissReminder() {
-    // Dismiss for the rest of the day
-    const endOfDay = new Date()
-    endOfDay.setHours(23, 59, 59, 999)
-    localStorage.setItem('domestre.reminder_dismissed_until', endOfDay.toISOString())
-    setReminderDismissed(true)
-  }
+
 
   // Determine reminder type
-  const showUrgentReminder = testOverrideState === 'urgent' || (!testOverrideState && !reminderDismissed &&
+  const showUrgentReminder = testOverrideState === 'urgent' || (!testOverrideState &&
     role === 'promotor' &&
     promoterActivity &&
     promoterActivity.daysSinceLastVisit !== null &&
     promoterActivity.daysSinceLastVisit >= 3)
 
-  const showSoftReminder = testOverrideState === 'soft' || (!testOverrideState && !reminderDismissed &&
+  const showSoftReminder = testOverrideState === 'soft' || (!testOverrideState &&
     role === 'promotor' &&
     promoterActivity &&
     !promoterActivity.visitedToday &&
@@ -130,13 +118,13 @@ export const Dashboard: React.FC = () => {
     if (showSoftReminder) {
       return 'linear-gradient(135deg, oklch(38% .12 55) 0%, oklch(24% .08 55) 100%)' // Amber daily alert
     }
-    if (visitedToday && !reminderDismissed) {
+    if (visitedToday) {
       return 'linear-gradient(135deg, oklch(32% .12 150) 0%, oklch(20% .08 160) 100%)' // Success green
     }
     return 'var(--gradient-hero)' // Navy standard
-  }, [showUrgentReminder, showSoftReminder, visitedToday, reminderDismissed])
+  }, [showUrgentReminder, showSoftReminder, visitedToday])
 
-  const showAlertCard = showUrgentReminder || showSoftReminder || (visitedToday && !reminderDismissed)
+  const showAlertCard = showUrgentReminder || showSoftReminder || visitedToday
 
   const quickAccessLinks = [
     {
@@ -261,11 +249,6 @@ export const Dashboard: React.FC = () => {
                   <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
                     {/* Subtle diagonal stripe overlay */}
                     <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, white 8px, white 9px)' }} />
-                    <div className="absolute top-0 right-0 p-4">
-                      <button onClick={dismissReminder} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Fechar lembrete">
-                        <X size={16} />
-                      </button>
-                    </div>
                     <div className="flex items-start gap-4">
                       <div className="relative shrink-0">
                         <span className="absolute inline-flex h-10 w-10 rounded-full bg-red-400/40 animate-ping" />
@@ -299,11 +282,6 @@ export const Dashboard: React.FC = () => {
                   <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
                     {/* Subtle diagonal stripe overlay */}
                     <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, white 8px, white 9px)' }} />
-                    <div className="absolute top-0 right-0 p-4">
-                      <button onClick={dismissReminder} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Fechar lembrete">
-                        <X size={16} />
-                      </button>
-                    </div>
                     <div className="flex items-start gap-4">
                       <div className="relative shrink-0">
                         <span className="absolute inline-flex h-10 w-10 rounded-full bg-amber-400/40 animate-ping" />
@@ -333,13 +311,8 @@ export const Dashboard: React.FC = () => {
                   </div>
                 )}
 
-                {visitedToday && !reminderDismissed && (
+                 {visitedToday && (
                   <div className="relative overflow-hidden rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 p-6 sm:p-8 text-white shadow-[var(--shadow-elegant)]">
-                    <div className="absolute top-0 right-0 p-4">
-                      <button onClick={dismissReminder} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer" aria-label="Fechar">
-                        <X size={16} />
-                      </button>
-                    </div>
                     <div className="flex items-start gap-4">
                       <div className="shrink-0">
                         <div className="h-11 w-11 rounded-full bg-emerald-500/25 border border-emerald-300/40 flex items-center justify-center">
@@ -432,7 +405,6 @@ export const Dashboard: React.FC = () => {
             <button
               onClick={() => {
                 setTestOverrideState('soft')
-                setReminderDismissed(false)
               }}
               className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
                 testOverrideState === 'soft'
@@ -445,7 +417,6 @@ export const Dashboard: React.FC = () => {
             <button
               onClick={() => {
                 setTestOverrideState('urgent')
-                setReminderDismissed(false)
               }}
               className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
                 testOverrideState === 'urgent'
@@ -458,7 +429,6 @@ export const Dashboard: React.FC = () => {
             <button
               onClick={() => {
                 setTestOverrideState('success')
-                setReminderDismissed(false)
               }}
               className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
                 testOverrideState === 'success'
