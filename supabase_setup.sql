@@ -1,5 +1,5 @@
 -- =========================================================================
--- SCRIPT UNIFICADO DE BANCO DE DADOS E SEGURANÇA - PRODUTOS DO MESTRE (V4)
+-- SCRIPT UNIFICADO DE BANCO DE DADOS E SEGURANÇA - PRODUTOS DO MESTRE (V5)
 -- =========================================================================
 -- Database: PostgreSQL (Supabase)
 -- Instruções: Copie todo o código abaixo, acesse o painel do Supabase,
@@ -54,11 +54,11 @@ CREATE TABLE public.usuarios (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Papéis Internos (Membro / Admin / Promotor)
+-- Papéis Internos (Membro / Admin / Promotor / Vendedor)
 CREATE TABLE public.user_roles (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-    role text NOT NULL CHECK (role IN ('admin', 'member', 'promotor')),
+    role text NOT NULL CHECK (role IN ('admin', 'member', 'promotor', 'vendedor')),
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     UNIQUE(user_id, role)
 );
@@ -740,4 +740,4 @@ BEGIN
 END;
 $$;
 
--- FIM DO SCRIPT UNIFICADO V4
+-- FIM DO SCRIPT UNIFICADO V5
