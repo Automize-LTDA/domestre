@@ -718,10 +718,16 @@ export const RelatorioAvariasForm: React.FC<RelatorioFormProps> = ({ compact = f
             </div>
           )}
           {completionPercent === 100 && (
-            <div className="flex-1 sm:flex-none flex items-center gap-2 rounded-xl px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
-              <CheckCircle2 size={14} />
-              Tudo preenchido! Pronto para salvar.
-            </div>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                generateReportPDF(getPreparedReport());
+              }}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 bg-secondary border border-border text-brand-navy text-sm font-bold shadow-sm hover:bg-brand-navy hover:text-white transition-colors"
+            >
+              <FileDown size={16} />
+              Salvar em PDF
+            </button>
           )}
           <button
             onClick={handleSave}
