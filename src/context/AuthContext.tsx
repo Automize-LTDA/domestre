@@ -32,12 +32,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setFullName('Administrador')
         return
       }
-      if (userId === '11111111-1111-1111-1111-111111111111') {
-        setRole('promotor')
-        setCargo('promotor')
-        setFullName('Promotor Teste')
-        return
-      }
 
       const [roleRes, profileRes, usuarioRes] = await Promise.all([
         supabase.rpc('get_user_role', { _user_id: userId }),
@@ -96,15 +90,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (savedMock) {
       const parsed = JSON.parse(savedMock)
       setUser(parsed)
-      if (parsed.id === '11111111-1111-1111-1111-111111111111') {
-        setRole('promotor')
-        setCargo('promotor')
-        setFullName('Promotor Teste')
-      } else {
-        setRole('admin')
-        setCargo('admin')
-        setFullName('Administrador')
-      }
+      setRole('admin')
+      setFullName('Administrador')
       setLoading(false)
     }
 
@@ -160,19 +147,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setFullName('Administrador')
       localStorage.setItem('domestre.mock_session', JSON.stringify(mockUser))
       return { cargo: 'admin' }
-    }
-    if ((cleanEmail === 'promotor' || cleanEmail === 'promotor@domestre.com') && password === '123') {
-      const mockUser = {
-        id: '11111111-1111-1111-1111-111111111111',
-        email: 'promotor@domestre.com',
-        user_metadata: { full_name: 'Promotor Teste' }
-      } as any
-      setUser(mockUser)
-      setRole('promotor')
-      setCargo('promotor')
-      setFullName('Promotor Teste')
-      localStorage.setItem('domestre.mock_session', JSON.stringify(mockUser))
-      return { cargo: 'promotor' }
     }
 
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
