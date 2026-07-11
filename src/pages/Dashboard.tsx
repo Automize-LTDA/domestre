@@ -21,13 +21,6 @@ import {
 export const Dashboard: React.FC = () => {
   const { role, user } = useAuth()
   const [showInstallBanner, setShowInstallBanner] = React.useState(false)
-  const [testOverrideState, setTestOverrideState] = React.useState<'soft' | 'urgent' | 'success' | null>(null)
-
-  const isTestSite = window.location.hostname.includes('localhost') || 
-                     window.location.hostname.includes('127.0.0.1') || 
-                     window.location.hostname.includes('test') || 
-                     window.location.hostname.includes('staging') || 
-                     window.location.hostname !== 'dashboard-mestre.vercel.app'
 
   React.useEffect(() => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone
@@ -103,19 +96,19 @@ export const Dashboard: React.FC = () => {
 
 
   // Determine reminder type
-  const showUrgentReminder = testOverrideState === 'urgent' || (!testOverrideState &&
+  const showUrgentReminder = 
     role === 'promotor' &&
     promoterActivity &&
     promoterActivity.daysSinceLastVisit !== null &&
-    promoterActivity.daysSinceLastVisit >= 3)
+    promoterActivity.daysSinceLastVisit >= 3
 
-  const showSoftReminder = testOverrideState === 'soft' || (!testOverrideState &&
+  const showSoftReminder = 
     role === 'promotor' &&
     promoterActivity &&
     !promoterActivity.visitedToday &&
-    (promoterActivity.daysSinceLastVisit === null || promoterActivity.daysSinceLastVisit < 3))
+    (promoterActivity.daysSinceLastVisit === null || promoterActivity.daysSinceLastVisit < 3)
 
-  const visitedToday = testOverrideState === 'success' || (!testOverrideState && role === 'promotor' && promoterActivity?.visitedToday)
+  const visitedToday = role === 'promotor' && promoterActivity?.visitedToday
 
   const heroGradient = React.useMemo(() => {
     if (showUrgentReminder) {
@@ -401,69 +394,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </section>
 
-      {/* DEVELOPER ALERT TEST PANEL */}
-      {isTestSite && (
-        <section className="mx-auto max-w-7xl w-full px-6 py-6 border-t border-border mt-6 no-print">
-          <div className="rounded-2xl bg-secondary/40 border border-border p-5">
-            <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-              🛠️ Painel de Testes — Simular Cores dos Alertas
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  setTestOverrideState('soft')
-                }}
-                className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                  testOverrideState === 'soft'
-                    ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
-                    : 'bg-card text-foreground border-border hover:bg-secondary'
-                }`}
-              >
-                ⚠️ Simular Amarelo (Sem visita hoje)
-              </button>
-              <button
-                onClick={() => {
-                  setTestOverrideState('urgent')
-                }}
-                className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                  testOverrideState === 'urgent'
-                    ? 'bg-red-500 text-white border-red-500 shadow-sm'
-                    : 'bg-card text-foreground border-border hover:bg-secondary'
-                }`}
-              >
-                🚨 Simular Vermelho (3+ dias sem visita)
-              </button>
-              <button
-                onClick={() => {
-                  setTestOverrideState('success')
-                }}
-                className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                  testOverrideState === 'success'
-                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
-                    : 'bg-card text-foreground border-border hover:bg-secondary'
-                }`}
-              >
-                ✅ Simular Verde (Visitas registradas)
-              </button>
-              <button
-                onClick={() => {
-                  setTestOverrideState(null)
-                }}
-                className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
-                  testOverrideState === null
-                    ? 'bg-brand-navy text-white border-brand-navy'
-                    : 'bg-card text-foreground border-border hover:bg-secondary'
-                }`}
-              >
-                🔄 Dados Reais (Supabase)
-              </button>
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-2.5">
-              Use este painel para alternar instantaneamente entre os estados visuais dos alertas e as cores do topo do site.
-            </p>
-          </div>
-        </section>
-      )}
+
 
       </div>
     </Layout>
