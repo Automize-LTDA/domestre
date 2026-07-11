@@ -17,6 +17,23 @@ import {
 import logoUrl from '../assets/logo.png'
 import sideImgUrl from '../assets/login-side.png'
 
+const getSecureRedirectUrl = (targetUrl: string): string => {
+  try {
+    const urlObj = new URL(targetUrl)
+    const allowedDomains = ['dashboard-mestre.vercel.app', 'localhost', '127.0.0.1']
+    const isAllowed = allowedDomains.includes(urlObj.hostname) || urlObj.hostname.endsWith('.vercel.app')
+    if (!isAllowed) {
+      return 'https://dashboard-mestre.vercel.app/login'
+    }
+    return targetUrl
+  } catch (e) {
+    if (targetUrl.startsWith('/') || targetUrl.startsWith('.')) {
+      return targetUrl
+    }
+    return 'https://dashboard-mestre.vercel.app/login'
+  }
+}
+
 export const Login: React.FC = () => {
   const { signIn, user, cargo, fullName, loading, session } = useAuth()
   const { showToast } = useToast()
@@ -31,6 +48,7 @@ export const Login: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [redirectingToDashboard, setRedirectingToDashboard] = useState(false)
+  const [lockoutTimeLeft, setLockoutTimeLeft] = useState<number>(0)
   
   const redirectTimerRef = useRef<any>(null)
   const hasStartedRedirect = useRef(false)
@@ -57,14 +75,49 @@ export const Login: React.FC = () => {
   // Redirect if already logged in
   const redirectPath = (location.state as any)?.redirect || '/'
 
-  // Load remembered username if exists
+  // Load remembered username and check lockout if exists
   useEffect(() => {
     const saved = localStorage.getItem('domestre.remembered_user')
     if (saved) {
       setUsername(saved)
       setRememberMe(true)
     }
+
+    const lockoutUntilStr = localStorage.getItem('domestre.lockout_until')
+    if (lockoutUntilStr) {
+      const lockoutUntil = parseInt(lockoutUntilStr, 10)
+      const now = Date.now()
+      if (lockoutUntil > now) {
+        setLockoutTimeLeft(Math.ceil((lockoutUntil - now) / 1000))
+      } else {
+        localStorage.removeItem('domestre.lockout_until')
+        localStorage.setItem('domestre.login_attempts', '0')
+      }
+    }
   }, [])
+
+  // Lockout countdown timer
+  useEffect(() => {
+    if (lockoutTimeLeft <= 0) {
+      if (errorMessage?.includes('Muitas tentativas')) {
+        setErrorMessage(null)
+      }
+      return
+    }
+    setErrorMessage(`Muitas tentativas incorretas. Login bloqueado temporariamente. Tente novamente em ${lockoutTimeLeft}s.`)
+    const timer = setInterval(() => {
+      setLockoutTimeLeft(prev => {
+        if (prev <= 1) {
+          localStorage.removeItem('domestre.lockout_until')
+          localStorage.setItem('domestre.login_attempts', '0')
+          clearInterval(timer)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [lockoutTimeLeft, errorMessage])
 
   useEffect(() => {
     if (!loading && user) {
@@ -78,13 +131,14 @@ export const Login: React.FC = () => {
         if (window.location.hostname !== 'localhost' && dashboardUrl.includes('localhost')) {
           dashboardUrl = 'https://dashboard-mestre.vercel.app/login'
         }
+        dashboardUrl = getSecureRedirectUrl(dashboardUrl)
         redirectTimerRef.current = setTimeout(() => {
           const mockSession = localStorage.getItem('domestre.mock_session')
           let finalUrl = dashboardUrl
           if (mockSession) {
             finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'mock=true'
           } else if (session) {
-            finalUrl += (finalUrl.includes('?') ? '&' : '?') + `access_token=${session.access_token}&refresh_token=${session.refresh_token}`
+            finalUrl += `#access_token=${session.access_token}&refresh_token=${session.refresh_token}`
           }
           window.location.href = finalUrl
         }, 3000)
@@ -98,6 +152,18 @@ export const Login: React.FC = () => {
     e.preventDefault()
     setErrorMessage(null)
     setSuccessMessage(null)
+
+    // Check rate limit lockout first
+    const lockoutUntilStr = localStorage.getItem('domestre.lockout_until')
+    if (lockoutUntilStr) {
+      const lockoutUntil = parseInt(lockoutUntilStr, 10)
+      const now = Date.now()
+      if (lockoutUntil > now) {
+        const remaining = Math.ceil((lockoutUntil - now) / 1000)
+        setErrorMessage(`Muitas tentativas falhas. Tente novamente em ${remaining}s.`)
+        return
+      }
+    }
 
     const cleanUsername = username.trim()
     if (!cleanUsername || !password) {
@@ -130,6 +196,7 @@ export const Login: React.FC = () => {
         if (window.location.hostname !== 'localhost' && dashboardUrl.includes('localhost')) {
           dashboardUrl = 'https://dashboard-mestre.vercel.app/login'
         }
+        dashboardUrl = getSecureRedirectUrl(dashboardUrl)
         redirectTimerRef.current = setTimeout(async () => {
           const mockSession = localStorage.getItem('domestre.mock_session')
           let finalUrl = dashboardUrl
@@ -138,24 +205,44 @@ export const Login: React.FC = () => {
           } else {
             const { data: { session: currentSession } } = await supabase.auth.getSession()
             if (currentSession) {
-              finalUrl += (finalUrl.includes('?') ? '&' : '?') + `access_token=${currentSession.access_token}&refresh_token=${currentSession.refresh_token}`
+              finalUrl += `#access_token=${currentSession.access_token}&refresh_token=${currentSession.refresh_token}`
             }
           }
           window.location.href = finalUrl
         }, 3000)
+        // Reset rate limiting attempts on successful login
+        localStorage.setItem('domestre.login_attempts', '0')
+        localStorage.removeItem('domestre.lockout_until')
         return
       }
+
+      // Reset rate limiting attempts on successful login
+      localStorage.setItem('domestre.login_attempts', '0')
+      localStorage.removeItem('domestre.lockout_until')
 
       setSuccessMessage('Redirecionando...')
       setTimeout(() => {
         navigate(redirectPath)
       }, 500)
     } catch (err: any) {
-      const errMsg = err.message || 'Falha no login'
-      const translatedMsg = errMsg.toLowerCase().includes('invalid') 
-        ? 'Usuário ou senha incorretos' 
-        : errMsg
-      setErrorMessage(translatedMsg)
+      // Increment failed login attempts
+      const attemptsStr = localStorage.getItem('domestre.login_attempts') || '0'
+      const attempts = parseInt(attemptsStr, 10) + 1
+      localStorage.setItem('domestre.login_attempts', attempts.toString())
+
+      if (attempts >= 5) {
+        const lockoutDuration = 60 * 1000 // 1 minute lockout
+        const lockoutUntil = Date.now() + lockoutDuration
+        localStorage.setItem('domestre.lockout_until', lockoutUntil.toString())
+        setLockoutTimeLeft(60)
+        setErrorMessage('Muitas tentativas incorretas. Login bloqueado temporariamente por 1 minuto.')
+      } else {
+        const errMsg = err.message || 'Falha no login'
+        const translatedMsg = errMsg.toLowerCase().includes('invalid') 
+          ? `Usuário ou senha incorretos. Tentativa ${attempts} de 5.` 
+          : errMsg
+        setErrorMessage(translatedMsg)
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -308,8 +395,9 @@ export const Login: React.FC = () => {
                   autoCorrect="off"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
+                  disabled={lockoutTimeLeft > 0}
                   placeholder="ex: joao"
-                  className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#233A7A] focus:bg-white focus:ring-2 focus:ring-[#233A7A]/5 transition-all"
+                  className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#233A7A] focus:bg-white focus:ring-2 focus:ring-[#233A7A]/5 transition-all disabled:opacity-50"
                   style={{ fontSize: '16px', touchAction: 'manipulation' }}
                   required
                 />
@@ -328,8 +416,9 @@ export const Login: React.FC = () => {
                   autoComplete="current-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
+                  disabled={lockoutTimeLeft > 0}
                   placeholder="Digite sua senha"
-                  className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-11 text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#233A7A] focus:bg-white focus:ring-2 focus:ring-[#233A7A]/5 transition-all"
+                  className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-11 text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#233A7A] focus:bg-white focus:ring-2 focus:ring-[#233A7A]/5 transition-all disabled:opacity-50"
                   style={{ fontSize: '16px', touchAction: 'manipulation' }}
                   required
                 />
@@ -370,7 +459,7 @@ export const Login: React.FC = () => {
             {/* Login Action Button */}
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || lockoutTimeLeft > 0}
               className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold text-white bg-[#233A7A] hover:bg-[#1E2E5C] active:scale-[0.99] hover:shadow-lg hover:shadow-[#233A7A]/10 transition-all disabled:opacity-60 disabled:hover:scale-100 disabled:hover:shadow-none mt-2"
             >
               {isSubmitting ? (

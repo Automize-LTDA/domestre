@@ -59,16 +59,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (window.location.hostname !== 'localhost' && dashboardUrl.includes('localhost')) {
                 dashboardUrl = 'https://dashboard-mestre.vercel.app/login'
               }
+              
+              // Validate redirect URL host to prevent Open Redirect
+              try {
+                const urlObj = new URL(dashboardUrl)
+                const allowedDomains = ['dashboard-mestre.vercel.app', 'localhost', '127.0.0.1']
+                const isAllowed = allowedDomains.includes(urlObj.hostname) || urlObj.hostname.endsWith('.vercel.app')
+                if (!isAllowed) {
+                  dashboardUrl = 'https://dashboard-mestre.vercel.app/login'
+                }
+              } catch (e) {
+                if (!dashboardUrl.startsWith('/') && !dashboardUrl.startsWith('.')) {
+                  dashboardUrl = 'https://dashboard-mestre.vercel.app/login'
+                }
+              }
+
               const mockSession = localStorage.getItem('domestre.mock_session')
               
               // Obter sessão atual para realizar o SSO
               const { data: { session: currentSession } } = await supabase.auth.getSession()
               let finalUrl = dashboardUrl
               
-              if (mockSession) {
+              const isProd = window.location.hostname === 'dashboard-mestre.vercel.app'
+              if (mockSession && !isProd) {
                 finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'mock=true'
               } else if (currentSession) {
-                finalUrl += (finalUrl.includes('?') ? '&' : '?') + `access_token=${currentSession.access_token}&refresh_token=${currentSession.refresh_token}`
+                finalUrl += `#access_token=${currentSession.access_token}&refresh_token=${currentSession.refresh_token}`
               }
               window.location.href = finalUrl
             }
@@ -85,9 +101,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   useEffect(() => {
-    // Check if there is a mock session first
+    // Check if there is a mock session first (only if not on production)
+    const isProd = window.location.hostname === 'dashboard-mestre.vercel.app'
     const savedMock = localStorage.getItem('domestre.mock_session')
-    if (savedMock) {
+    if (savedMock && isProd) {
+      localStorage.removeItem('domestre.mock_session')
+    } else if (savedMock) {
       const parsed = JSON.parse(savedMock)
       setUser(parsed)
       setRole('admin')
@@ -96,7 +115,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (localStorage.getItem('domestre.mock_session')) {
+      const isProdNow = window.location.hostname === 'dashboard-mestre.vercel.app'
+      if (localStorage.getItem('domestre.mock_session') && !isProdNow) {
         return
       }
       setSession(newSession)
@@ -135,7 +155,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   async function signIn(email: string, password: string): Promise<{ cargo: string | null } | void> {
     const cleanEmail = email.trim().toLowerCase()
-    if ((cleanEmail === 'admin' || cleanEmail === 'admin@domestre.com') && password === '123') {
+    const isProd = window.location.hostname === 'dashboard-mestre.vercel.app'
+    if (!isProd && (cleanEmail === 'admin' || cleanEmail === 'admin@domestre.com') && password === '123') {
       const mockUser = {
         id: '00000000-0000-0000-0000-000000000000',
         email: 'admin@domestre.com',
