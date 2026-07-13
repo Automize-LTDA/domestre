@@ -407,7 +407,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, requireAdmin = false }
           <div className="flex items-center gap-1 text-muted-foreground animate-float-gentle">
             <span>Desenvolvido pela</span>
             <a
-              href="https://automize-one.vercel.app/"
+              href="https://automizesistemas.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
               className="animate-automize-text"

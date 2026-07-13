@@ -486,7 +486,7 @@ export const Login: React.FC = () => {
             <div className="flex items-center gap-1 text-[11px] text-slate-400 animate-float-gentle">
               <span>Desenvolvido pela</span>
               <a
-                href="https://automize-one.vercel.app/"
+                href="https://automizesistemas.vercel.app/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="animate-automize-text"
