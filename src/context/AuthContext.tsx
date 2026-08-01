@@ -26,10 +26,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   async function fetchUserRoleAndProfile(userId: string) {
     try {
-      if (userId === '00000000-0000-0000-0000-000000000000') {
+      if (userId === '00000000-0000-0000-0000-000000000000' || userId === '11111111-1111-1111-1111-111111111111') {
         setRole('admin')
         setCargo('admin')
-        setFullName('Administrador')
+        setFullName(userId === '11111111-1111-1111-1111-111111111111' ? 'Kaua' : 'Administrador')
         return
       }
 
@@ -166,6 +166,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setRole('admin')
       setCargo('admin')
       setFullName('Administrador')
+      localStorage.setItem('domestre.mock_session', JSON.stringify(mockUser))
+      return { cargo: 'admin' }
+    }
+
+    if (!isProd && (cleanEmail === 'kaua' || cleanEmail === 'kaua@domestre.com') && password === 'dev@2026') {
+      const mockUser = {
+        id: '11111111-1111-1111-1111-111111111111',
+        email: 'kaua@domestre.com',
+        user_metadata: { full_name: 'Kaua' }
+      } as any
+      setUser(mockUser)
+      setRole('admin')
+      setCargo('admin')
+      setFullName('Kaua')
       localStorage.setItem('domestre.mock_session', JSON.stringify(mockUser))
       return { cargo: 'admin' }
     }

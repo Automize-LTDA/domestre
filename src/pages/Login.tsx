@@ -238,9 +238,12 @@ export const Login: React.FC = () => {
         setErrorMessage('Muitas tentativas incorretas. Login bloqueado temporariamente por 1 minuto.')
       } else {
         const errMsg = err.message || 'Falha no login'
-        const translatedMsg = errMsg.toLowerCase().includes('invalid') 
-          ? `Usuário ou senha incorretos. Tentativa ${attempts} de 5.` 
-          : errMsg
+        let translatedMsg = errMsg
+        if (errMsg.toLowerCase().includes('invalid')) {
+          translatedMsg = `Usuário ou senha incorretos. Tentativa ${attempts} de 5.`
+        } else if (errMsg.toLowerCase().includes('failed to fetch')) {
+          translatedMsg = 'Não foi possível conectar ao servidor (Failed to fetch). O banco de dados do Supabase pode estar pausado ou inativo.'
+        }
         setErrorMessage(translatedMsg)
       }
     } finally {
